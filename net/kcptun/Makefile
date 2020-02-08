@@ -1,17 +1,23 @@
+#
+# Copyright (C) 2019 Xingwang Liao
+#
+# This is free software, licensed under the GNU General Public License v2.
+# See /LICENSE for more information.
+#
+
 include $(TOPDIR)/rules.mk
 
 PKG_NAME:=kcptun
-PKG_VERSION:=20200103
-PKG_RELEASE:=2
+PKG_VERSION:=20200409
+PKG_RELEASE:=1
 
 PKG_SOURCE:=$(PKG_NAME)-$(PKG_VERSION).tar.gz
-PKG_SOURCE_URL:=https://codeload.github.com/xtaci/kcptun/tar.gz/v${PKG_VERSION}?
-PKG_SOURCE_DATE:=2020-01-03
-PKG_HASH:=620d4cd3ed1660e71b0fe1041c063e8fb38dc3aa7a6c78f6570e812566f44bb5
+PKG_SOURCE_URL:=https://codeload.github.com/xtaci/kcptun/tar.gz/v$(PKG_VERSION)?
+PKG_HASH:=312b8f438549225dfd1eac95444dd6a4c50610578ddcf7ff21e19c73a855d4bc
 
-PKG_MAINTAINER:=Dengfeng Liu <liudf0716@gmail.com>, Chao Liu <expiron18@gmail.com>
 PKG_LICENSE:=MIT
 PKG_LICENSE_FILES:=LICENSE.md
+PKG_MAINTAINER:=Xingwang Liao <kuoruan@gmail.com>
 
 PKG_BUILD_DEPENDS:=golang/host
 PKG_BUILD_PARALLEL:=1
@@ -19,57 +25,39 @@ PKG_USE_MIPS16:=0
 
 GO_PKG:=github.com/xtaci/kcptun
 
-GO_PKG_LDFLAGS:=-s -w
-GO_PKG_LDFLAGS_X:=main.VERSION=$(PKG_VERSION)
+GO_PKG_LDFLAGS:=-s -w -X 'main.VERSION=$(PKG_VERSION)-$(PKG_RELEASE) for OpenWrt'
+
+# Can't use GO_PKG_LDFLAGS_X to define X args with space
 
 include $(INCLUDE_DIR)/package.mk
-include ../../lang/golang/golang-package.mk
-
-define Package/kcptun-config
-  SECTION:=net
-  CATEGORY:=Network
-  SUBMENU:=Web Servers/Proxies
-  TITLE:=Kcptun Config Scripts
-  URL:=https://github.com/xtaci/kcptun
-  DEPENDS:=$(GO_ARCH_DEPENDS)
-endef
-
-define Package/kcptun-config/conffiles
-/etc/config/kcptun
-endef
-
-define Package/kcptun-config/install
-	$(INSTALL_DIR) $(1)/etc/config
-	$(INSTALL_CONF) ./files/kcptun.config $(1)/etc/config/kcptun
-	$(INSTALL_DIR) $(1)/etc/init.d
-	$(INSTALL_BIN) ./files/kcptun.init $(1)/etc/init.d/kcptun
-endef
+include $(TOPDIR)/feeds/packages/lang/golang/golang-package.mk
 
 define Package/kcptun/Default
   define Package/kcptun-$(1)
     SECTION:=net
     CATEGORY:=Network
     SUBMENU:=Web Servers/Proxies
-    TITLE:=KCP-based Secure Tunnel $(1)
+    DEPENDS:=$$(GO_ARCH_DEPENDS)
+    TITLE:=Simple UDP Tunnel Based On KCP ($1)
     URL:=https://github.com/xtaci/kcptun
-    DEPENDS:=+kcptun-config
   endef
 
   define Package/kcptun-$(1)/description
-    kcptun is a Stable & Secure Tunnel Based On KCP with N:M Multiplexing.
-This package only contains kcptun $(1).
+  A Stable & Secure Tunnel Based On KCP with N:M Multiplexing.
+
+  This package contains the kcptun $(1).
   endef
 
   define Package/kcptun-$(1)/install
-		$$(call GoPackage/Package/Install/Bin,$$(PKG_INSTALL_DIR))
+	$$(call GoPackage/Package/Install/Bin,$$(PKG_INSTALL_DIR))
 
-		$$(INSTALL_DIR) $$(1)/usr/bin
-		$$(INSTALL_BIN) $$(PKG_INSTALL_DIR)/usr/bin/$(1) $$(1)/usr/bin/kcptun-$(1)
+	$$(INSTALL_DIR) $$(1)/usr/bin
+	$$(INSTALL_BIN) $$(PKG_INSTALL_DIR)/usr/bin/$(1) $$(1)/usr/bin/kcptun-$(1)
   endef
 endef
 
-$(eval $(call BuildPackage,kcptun-config))
-KCPTUN_COMPONENTS:=server client
+KCPTUN_COMPONENTS:=client server
+
 $(foreach component,$(KCPTUN_COMPONENTS), \
   $(eval $(call Package/kcptun/Default,$(component))) \
   $(eval $(call GoBinPackage,kcptun-$(component))) \
