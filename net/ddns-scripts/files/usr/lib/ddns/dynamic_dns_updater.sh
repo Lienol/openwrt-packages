@@ -258,7 +258,7 @@ esac
 # verify validity of variables
 [ -n "$lookup_host" ] && sanitize_variable lookup_host "$DNS_CHARSET" ""
 [ -n "$dns_server" ] && sanitize_variable dns_server "$DNS_CHARSET" ""
-[ -n "$domain" ] && sanitize_variable domain "$DNS_CHARSET_DOMAIN" ""
+#[ -n "$domain" ] && sanitize_variable domain "$DNS_CHARSET_DOMAIN" ""
 
 # Filter shell escape characters, if these are required in the URL, they
 # can still be passed url encoded
