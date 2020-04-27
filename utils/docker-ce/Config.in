@@ -1,7 +1,7 @@
 menu "Kernel features for Docker"
 	config DOCKER_KERNEL_OPTIONS
 		bool "Enable Basic kernel support for Docker"
-		default n
+		default y
 		select KERNEL_CGROUPS
 		select KERNEL_CGROUP_CPUACCT
 		select KERNEL_CGROUP_SCHED
@@ -18,7 +18,7 @@ menu "Kernel features for Docker"
 
 	config DOCKER_SECCOMP
 		bool "Enable support for seccomp in Docker"
-		default n
+		default y
 		select KERNEL_SECCOMP
 		select PACKAGE_libseccomp
 		help
@@ -27,7 +27,7 @@ menu "Kernel features for Docker"
 
 	config DOCKER_RES_SHAPE
 		bool "Enables support for resource shaping"
-		default n
+		default y
 		select KERNEL_MEMCG_SWAP
 		select KERNEL_MEMCG_SWAP_ENABLED
 		select KERNEL_BLK_DEV_THROTTLING
@@ -49,7 +49,7 @@ menu "Kernel features for Docker"
 		config DOCKER_NET_ENCRYPT
 			bool "Enable encrypted networking kernel support"
 			depends on DOCKER_NET_OVERLAY
-			default n
+			default y
 			select PACKAGE_kmod-ipsec
 			select PACKAGE_kmod-ipsec4
 			select PACKAGE_kmod-crypto-gcm
@@ -59,13 +59,13 @@ menu "Kernel features for Docker"
 
 		config DOCKER_NET_MACVLAN
 			bool "Enables macvlan kernel support"
-			default n
+			default y
 			select PACKAGE_kmod-macvlan
 			select PACKAGE_kmod-dummy
 
 		config DOCKER_NET_TFTP
 			bool "Enable ftp/tftp client kernel support"
-			default n
+			default y
 			select PACKAGE_kmod-nf-nathelper
 			select PACKAGE_kmod-nf-nathelper-extra
 	endmenu
@@ -73,7 +73,7 @@ menu "Kernel features for Docker"
 	menu "Storage"
 		config DOCKER_STO_EXT4
 			bool "Enables support for ext3 or ext4 as the backing filesystem"
-			default n
+			default y
 			select KERNEL_EXT4_FS_POSIX_ACL
 
 		config DOCKER_STO_BTRFS
