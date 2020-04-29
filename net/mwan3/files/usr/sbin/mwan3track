@@ -61,7 +61,7 @@ main() {
 	local recovery_interval down up size
 	local keep_failure_interval check_quality failure_latency
 	local recovery_latency failure_loss recovery_loss
-	local max_ttl
+	local max_ttl httping_ssl
 
 	[ -z "$5" ] && echo "Error: should not be started manually" && exit 0
 
@@ -75,6 +75,7 @@ main() {
 
 	config_load mwan3
 	config_get track_method $1 track_method ping
+	config_get_bool httping_ssl $1 httping_ssl 0
 	validate_track_method $track_method $SRC_IP || {
 		track_method=ping
 		if validate_track_method $track_method; then
@@ -131,11 +132,17 @@ main() {
 			if [ $host_up_count -lt $reliability ]; then
 				case "$track_method" in
 					ping)
+						# pinging IPv6 hosts with an interface is troublesome
+						# https://bugs.openwrt.org/index.php?do=details&task_id=2897
+						# so get the IP address of the interface and use that instead
+						if echo $track_ip | grep -q ':'; then
+							ADDR=$(ip -6 addr ls dev "$DEVICE" | sed -ne 's/ *inet6 \([^ \/]*\).* scope global.*/\1/p')
+						fi
 						if [ $check_quality -eq 0 ]; then
-							ping -I $DEVICE -c $count -W $timeout -s $size -t $max_ttl -q $track_ip &> /dev/null
+							ping -I ${ADDR:-$DEVICE} -c $count -W $timeout -s $size -t $max_ttl -q $track_ip &> /dev/null
 							result=$?
 						else
-							ping_result="$(ping -I $DEVICE -c $count -W $timeout -s $size -t $max_ttl -q $track_ip | tail -2)"
+							ping_result="$(ping -I ${ADDR:-$DEVICE} -c $count -W $timeout -s $size -t $max_ttl -q $track_ip | tail -2)"
 							loss="$(echo "$ping_result" | grep "packet loss" |  cut -d "," -f3 | awk '{print $1}' | sed -e 's/%//')"
 							if [ "$loss" -eq 100 ]; then
 								latency=999999
@@ -149,7 +156,11 @@ main() {
 						result=$?
 					;;
 					httping)
-						httping -y $SRC_IP -c $count -t $timeout -q $track_ip &> /dev/null
+						if [ "$httping_ssl" -eq 1 ]; then
+							httping -y $SRC_IP -c $count -t $timeout -q "https://$track_ip" &> /dev/null
+						else
+							httping -y $SRC_IP -c $count -t $timeout -q "http://$track_ip" &> /dev/null
+						fi
 						result=$?
 					;;
 					nping-tcp)
