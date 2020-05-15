@@ -9,6 +9,7 @@ menu "Kernel features for Docker"
 		select KERNEL_CPUSETS
 		select KERNEL_MEMCG
 		select KERNEL_KEYS
+		select KERNEL_LXC_MISC
 		select KERNEL_DEVPTS_MULTIPLE_INSTANCES
 		select KERNEL_POSIX_MQUEUE
 		help
