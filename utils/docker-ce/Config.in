@@ -60,7 +60,7 @@ menu "Kernel features for Docker"
 
 		config DOCKER_NET_MACVLAN
 			bool "Enables macvlan kernel support"
-			default y
+			default n
 			select PACKAGE_kmod-macvlan
 			select PACKAGE_kmod-dummy
 
