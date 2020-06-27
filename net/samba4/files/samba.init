@@ -6,6 +6,7 @@ USE_PROCD=1
 SAMBA_IFACE=""
 
 smb_header() {
+	config_get_bool enabled $1 enabled 1
 	config_get SAMBA_IFACE $1 interface "lan"
 
 	# resolve interfaces
@@ -200,6 +201,7 @@ service_triggers() {
 
 start_service() {
 	init_config
+	[ $enabled != 1 ] && return 1
 	
 	if [ ! -e /etc/samba/smb.conf ]; then
 		logger -p daemon.error -t 'samba4-server' "missing config /etc/samba/smb.conf!"
