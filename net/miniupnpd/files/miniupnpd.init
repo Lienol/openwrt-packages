@@ -89,7 +89,7 @@ upnpd() {
 	config_get upnp_lease_file config upnp_lease_file
 	config_get clean_ruleset_threshold config clean_ruleset_threshold
 	config_get clean_ruleset_interval config clean_ruleset_interval
-	config_get ipv6_disable config ipv6_disable 0
+	config_get ipv6_disable config ipv6_disable 1
 	config_get ext_ip_reserved_ignore config ext_ip_reserved_ignore 0
 
 	local conf ifname ifname6
