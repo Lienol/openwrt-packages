@@ -275,7 +275,8 @@ write_log() {
 	if [ ${use_logfile:-1} -eq 1 -o $VERBOSE -gt 1 ]; then
 		if [ -n "$password" ]; then
 			# url encode __MSG, password already done
-			urlencode __MSE "$__MSG"
+			__MSE="$__MSG"
+			#urlencode __MSE "$__MSG"
 			# replace encoded password inside encoded message
 			# and url decode (newline was encoded as %00)
 			__MSG=$( echo -e "$__MSE" \
