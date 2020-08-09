@@ -8,29 +8,33 @@
 include $(TOPDIR)/rules.mk
 
 PKG_NAME:=libzdb
-PKG_VERSION:=3.1
-PKG_RELEASE:=6
-PKG_LICENSE:=GPL-3.0
+PKG_VERSION:=3.2.1
+PKG_RELEASE:=2
 
 PKG_SOURCE:=$(PKG_NAME)-$(PKG_VERSION).tar.gz
-PKG_SOURCE_URL:=http://www.tildeslash.com/libzdb/dist/
-PKG_HASH:=0f01abb1b01d1a1f4ab9b55ad3ba445d203fc3b4757abdf53e1d85e2b7b42695
+PKG_SOURCE_URL:=https://www.tildeslash.com/libzdb/dist/
+PKG_HASH:=b9a7b59a0a9f53dc87ce1b5a919f21b8cd6448c04a9157bccef1e3c1dffd3ff1
 
-PKG_FIXUP:=autoreconf
+PKG_MAINTAINER:=Alexandru Ardelean <ardeleanalex@gmail.com>
+PKG_LICENSE:=GPL-3.0-or-later
+PKG_LICENSE_FILES:=COPYING
+
 PKG_INSTALL:=1
-
+PKG_BUILD_PARALLEL:=1
 PKG_BUILD_DEPENDS:=libzdb/host
+PKG_FIXUP:=autoreconf
 
+include $(INCLUDE_DIR)/uclibc++.mk
 include $(INCLUDE_DIR)/package.mk
 # libzdb needs to find iconv when linking to libmariadb
 include $(INCLUDE_DIR)/nls.mk
+include $(INCLUDE_DIR)/host-build.mk
 
 define Package/libzdb
     SECTION:=libs
     CATEGORY:=Libraries
     TITLE:=A thread-safe multi database connection pool library
-    MAINTAINER:=Gergely Kiss <mail.gery@gmail.com>
-    URL:=http://www.tildeslash.com/libzdb/
+    URL:=https://www.tildeslash.com/libzdb/
     DEPENDS:=+libsqlite3 +libpq +libmysqlclient +zlib +libpthread +libopenssl
 endef
 
@@ -42,17 +46,16 @@ define Package/libzdb/description
    NOTE: This package does not include Oracle support.
 endef
 
-CONFIGURE_ARGS += --disable-profiling \
-		    --enable-optimized \
-		    --with-mysql \
-		    --with-postgresql \
-		    --with-sqlite \
-		    --enable-sqliteunlock \
-		    --enable-openssl
+CONFIGURE_ARGS += \
+	--disable-profiling \
+	--enable-optimized \
+	--enable-protected \
+	--enable-sqliteunlock \
+	--enable-openssl
 
-TARGET_CPPFLAGS += -std=c99
-
-include $(INCLUDE_DIR)/host-build.mk
+CONFIGURE_VARS += \
+	libzdb_cv_setjmp_available=yes \
+	libzdb_cv_vsnprintf_c11_conformant=yes
 
 define Hooks/HostConfigure/Pre
 endef
@@ -66,26 +69,21 @@ endef
 
 define Host/Install
 	$(INSTALL_DIR) $(STAGING_DIR_HOSTPKG)/bin
-	$(CP) $(HOST_BUILD_DIR)/tools/bin/filterh $(STAGING_DIR_HOSTPKG)/bin/
-endef
-
-$(eval $(call HostBuild))
-
-define Build/Compile
-	$(call Build/Compile/Default)
+	$(INSTALL_BIN) $(HOST_BUILD_DIR)/tools/bin/filterh $(STAGING_DIR_HOSTPKG)/bin
 endef
 
 define Build/InstallDev
 	$(INSTALL_DIR) $(1)/usr/include/zdb
 	$(INSTALL_DIR) $(1)/usr/lib/pkgconfig
-	$(CP) $(PKG_INSTALL_DIR)/usr/include/zdb/ $(1)/usr/include/
-	$(CP) $(PKG_INSTALL_DIR)/usr/lib/libzdb* $(1)/usr/lib/
-	$(CP) $(PKG_INSTALL_DIR)/usr/lib/pkgconfig/zdb.pc $(1)/usr/lib/pkgconfig
+	$(INSTALL_DATA) $(PKG_INSTALL_DIR)/usr/include/zdb/* $(1)/usr/include/zdb
+	$(CP) $(PKG_INSTALL_DIR)/usr/lib/libzdb* $(1)/usr/lib
+	$(INSTALL_DATA) $(PKG_INSTALL_DIR)/usr/lib/pkgconfig/zdb.pc $(1)/usr/lib/pkgconfig
 endef
 
 define Package/libzdb/install
 	$(INSTALL_DIR) $(1)/usr/lib
-	$(CP) $(PKG_INSTALL_DIR)/usr/lib/libzdb.so* $(1)/usr/lib/
+	$(CP) $(PKG_INSTALL_DIR)/usr/lib/libzdb.so* $(1)/usr/lib
 endef
 
+$(eval $(call HostBuild))
 $(eval $(call BuildPackage,libzdb))
