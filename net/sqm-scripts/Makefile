@@ -25,7 +25,7 @@ include $(INCLUDE_DIR)/package.mk
 define Package/sqm-scripts
   SECTION:=net
   CATEGORY:=Base system
-  DEPENDS:=+tc +kmod-sched-core +kmod-sched-cake +kmod-ifb +iptables \
+  DEPENDS:=+tc +kmod-sched-core +(LINUX_4_9||LINUX_4_14):kmod-sched-cake-oot +!(LINUX_4_9||LINUX_4_14):kmod-sched-cake +kmod-ifb +iptables \
 	+iptables-mod-ipopt +iptables-mod-conntrack-extra
   TITLE:=SQM Scripts (QoS)
   PKGARCH:=all
@@ -51,7 +51,7 @@ define Package/luci-app-sqm
   TITLE:=SQM Scripts - LuCI interface
   MAINTAINER:=Toke Høiland-Jørgensen <toke@toke.dk>
   PKGARCH:=all
-  DEPENDS:= +lua +luci-base +luci-compat +sqm-scripts
+  DEPENDS:=+lua +luci-base +luci-compat +sqm-scripts
   SUBMENU:=3. Applications
 endef
 
