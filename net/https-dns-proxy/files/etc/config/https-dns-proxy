@@ -1,8 +1,8 @@
 config main 'config'
 	option canary_domains_icloud '1'
 	option canary_domains_mozilla '1'
-	option dnsmasq_config_update '*'
-	option force_dns '1'
+	option dnsmasq_config_update '-'
+	option force_dns '0'
 	list force_dns_port '53'
 	list force_dns_port '853'
 # ports listed below are used by some
@@ -21,13 +21,3 @@ config main 'config'
 	option user 'nobody'
 	option group 'nogroup'
 	option listen_addr '127.0.0.1'
-
-config https-dns-proxy
-	option bootstrap_dns '1.1.1.1,1.0.0.1'
-	option resolver_url 'https://cloudflare-dns.com/dns-query'
-	option listen_port '5053'
-
-config https-dns-proxy
-	option bootstrap_dns '8.8.8.8,8.8.4.4'
-	option resolver_url 'https://dns.google/dns-query'
-	option listen_port '5054'
