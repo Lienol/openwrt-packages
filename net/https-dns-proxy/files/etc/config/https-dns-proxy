@@ -4,9 +4,9 @@ config main 'config'
 # Answer Mozilla canary domain so Firefox does not auto-enable its own DoH
 	option canary_domains_mozilla '1'
 # dnsmasq instances to point at the proxy ('*' = all, or space-separated indexes/names)
-	option dnsmasq_config_update '*'
+	option dnsmasq_config_update '-'
 # Force LAN clients onto the proxy by redirecting/rejecting their outbound DNS
-	option force_dns '1'
+	option force_dns '0'
 # Add nftables notrack rules for the proxy's loopback DNS traffic
 	option notrack_dns '1'
 # Destination ports intercepted by force_dns (53 = DNS, 853 = DoT)
@@ -38,19 +38,3 @@ config main 'config'
 	option listen_addr '127.0.0.1'
 # IP family for resolvers: 'auto' (dual-stack, default), 'ipv4' (IPv4 only + -4), 'ipv6' (IPv6 only)
 	option force_ip_family 'auto'
-
-config https-dns-proxy
-# Plain DNS servers used to resolve the DoH resolver hostname at startup
-	option bootstrap_dns '1.1.1.1,1.0.0.1,2606:4700:4700::1111,2606:4700:4700::1001'
-# DoH resolver endpoint (RFC 8484)
-	option resolver_url 'https://cloudflare-dns.com/dns-query'
-# Local port this instance listens on
-	option listen_port '5053'
-
-config https-dns-proxy
-# Plain DNS servers used to resolve the DoH resolver hostname at startup
-	option bootstrap_dns '8.8.8.8,8.8.4.4,2001:4860:4860::8888,2001:4860:4860::8844'
-# DoH resolver endpoint (RFC 8484)
-	option resolver_url 'https://dns.google/dns-query'
-# Local port this instance listens on
-	option listen_port '5054'
