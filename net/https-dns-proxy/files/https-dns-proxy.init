@@ -68,7 +68,6 @@ start_instance() {
 	config_get listen_addr "$cfg" 'listen_addr' '127.0.0.1'
 	config_get listen_port "$cfg" 'listen_port' "$p"
 
-:<<!
 	if [ "$dnsmasqConfig" = "*" ]; then
 		config_load 'dhcp'
 		config_foreach dnsmasq_add_doh_server 'dnsmasq' "${listen_addr}" "${listen_port}"
@@ -77,7 +76,6 @@ start_instance() {
 			dnsmasq_add_doh_server "@dnsmasq[${i}]" "${listen_addr}" "${listen_port}"
 		done
 	fi
-!
 	p="$((p+1))"
 }
 
@@ -88,28 +86,24 @@ service_triggers() {
 start_service() {
 	local p=5053
 	config_load 'https-dns-proxy'
-	config_get dnsmasqConfig	'config' 'update_dnsmasq_config' '*'
-	#dhcp_backup 'create'
+	#config_get dnsmasqConfig	'config' 'update_dnsmasq_config' '*'
+	dhcp_backup 'create'
 	config_load 'https-dns-proxy'
 	config_foreach start_instance 'https-dns-proxy'
-:<<!
 	if [ -n "$(uci -q changes dhcp)" ]; then
 		uci -q commit dhcp
 		[ -x /etc/init.d/dnsmasq ] && /etc/init.d/dnsmasq restart >/dev/null 2>&1
 	fi
-!
 }
 
 stop_service() {
 	config_load 'https-dns-proxy'
-	config_get dnsmasqConfig	'config' 'update_dnsmasq_config' '*'
-:<<!
+	#config_get dnsmasqConfig	'config' 'update_dnsmasq_config' '*'
 	dhcp_backup 'restore'
 	if [ -n "$(uci -q changes dhcp)" ]; then
 		uci -q commit dhcp
 		[ -x /etc/init.d/dnsmasq ] && /etc/init.d/dnsmasq restart >/dev/null 2>&1
 	fi
-!
 }
 
 service_triggers() {
