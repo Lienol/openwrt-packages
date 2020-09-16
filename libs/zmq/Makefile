@@ -10,23 +10,23 @@
 include $(TOPDIR)/rules.mk
 
 PKG_NAME:=zeromq
-PKG_VERSION:=4.1.7
-PKG_RELEASE:=2
+PKG_VERSION:=4.3.3
+PKG_RELEASE:=1
 
 PKG_SOURCE:=$(PKG_NAME)-$(PKG_VERSION).tar.gz
-PKG_SOURCE_URL:=https://github.com/zeromq/zeromq4-1/releases/download/v$(PKG_VERSION)
-PKG_HASH:=31c383cfcd3be1dc8a66e448c403029e793687e70473b89c4cc0bd626e7da299
+PKG_SOURCE_URL:=https://github.com/zeromq/libzmq/releases/download/v$(PKG_VERSION)
+PKG_HASH:=9d9285db37ae942ed0780c016da87060497877af45094ff9e1a1ca736e3875a2
 
 PKG_MAINTAINER:=Dirk Chang <dirk@kooiot.com>
 PKG_LICENSE:=GPL-3.0-or-later
 PKG_LICENSE_FILES:=LICENCE.txt
 PKG_CPE_ID:=cpe:/a:zeromq:libzmq
 
-PKG_INSTALL:=1
 PKG_BUILD_PARALLEL:=1
-PKG_REMOVE_FILES:=autogen.sh acinclude.m4 aclocal.m4
+CMAKE_BINARY_SUBDIR:=openwrt-build
 
 include $(INCLUDE_DIR)/package.mk
+include $(INCLUDE_DIR)/cmake.mk
 
 define Package/libzmq/default
   TITLE:=ZeroMQ - Message Queue engine
@@ -58,30 +58,41 @@ define Package/libzmq-curve/description
  Includes CurveZMQ security by libsodium.
 endef
 
-# add extra configure flags here
-CONFIGURE_ARGS += \
-	--enable-static \
-	--enable-shared \
-	--with-pic \
-	--with-relaxed \
-	--without-documentation
+CMAKE_OPTIONS += \
+	-DA2X_EXECUTABLE=OFF \
+	-DASCIIDOC_EXECUTABLE=OFF \
+	-DBUILD_STATIC=OFF \
+	-DCMAKE_SKIP_INSTALL_RPATH=ON \
+	-DZMQ_HAVE_SOCK_CLOEXEC=ON \
+	-DZMQ_HAVE_SO_KEEPALIVE=ON \
+	-DZMQ_HAVE_TCP_KEEPCNT=ON \
+	-DZMQ_HAVE_TCP_KEEPIDLE=ON \
+	-DZMQ_HAVE_TCP_KEEPINTVL=ON \
+	-DZMQ_HAVE_TCP_KEEPALIVE=ON \
+	-DENABLE_CURVE=ON \
+	-DENABLE_EVENTFD=ON \
+	-DPOLLER=epoll \
+	-DPYTHON_EXECUTABLE=OFF \
+	-DRT_LIBRARY=OFF \
+	-DWITH_OPENPGM=OFF \
+	-DZMQ_BUILD_TESTS=OFF
 
 ifeq ($(BUILD_VARIANT),curve)
-  CONFIGURE_ARGS+= --with-libsodium
+	CMAKE_OPTIONS += -DWITH_LIBSODIUM=ON
 else
-  CONFIGURE_ARGS+= --without-libsodium
+  	CMAKE_OPTIONS += -DWITH_LIBSODIUM=OFF
 endif
-
-TARGET_CXXFLAGS += -Wno-error=cpp
 
 define Build/InstallDev
 	$(INSTALL_DIR) $(1)/usr/include
 	$(CP) $(PKG_INSTALL_DIR)/usr/include/zmq.h $(1)/usr/include
 	$(CP) $(PKG_INSTALL_DIR)/usr/include/zmq_utils.h $(1)/usr/include
 	$(INSTALL_DIR) $(1)/usr/lib
-	$(CP) $(PKG_INSTALL_DIR)/usr/lib/libzmq.{a,so*} $(1)/usr/lib/
+	$(CP) $(PKG_INSTALL_DIR)/usr/lib/libzmq.so* $(1)/usr/lib/
 	$(INSTALL_DIR) $(1)/usr/lib/pkgconfig
 	$(CP) $(PKG_INSTALL_DIR)/usr/lib/pkgconfig/libzmq.pc $(1)/usr/lib/pkgconfig/
+	$(SED) 's,/usr/include,$$$${prefix}/include,g' $(1)/usr/lib/pkgconfig/libzmq.pc
+	$(SED) 's,/usr/lib,$$$${exec_prefix}/lib,g' $(1)/usr/lib/pkgconfig/libzmq.pc
 endef
 
 define Package/libzmq-nc/install
