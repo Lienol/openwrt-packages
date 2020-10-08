@@ -52,7 +52,6 @@ define Package/kcptun/Default
     SUBMENU:=Web Servers/Proxies
     TITLE:=KCP-based Secure Tunnel $(1)
     URL:=https://github.com/xtaci/kcptun
-    DEPENDS:=+kcptun-config
   endef
 
   define Package/kcptun-$(1)/description
