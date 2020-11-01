@@ -1,5 +1,5 @@
 #
-# Copyright (C) 2007-2019 OpenWrt.org
+# Copyright (C) 2007-2020 OpenWrt.org
 #
 # This is free software, licensed under the GNU General Public License v2.
 # See /LICENSE for more information.
@@ -9,7 +9,7 @@
 include $(TOPDIR)/rules.mk
 
 PKG_NAME:=zoneinfo
-PKG_VERSION:=2019b
+PKG_VERSION:=2020c
 PKG_RELEASE:=1
 
 #As i couldn't find real license used "Public Domain"
@@ -19,14 +19,14 @@ PKG_LICENSE:=Public Domain
 PKG_SOURCE:=tzdata$(PKG_VERSION).tar.gz
 PKG_SOURCE_CODE:=tzcode$(PKG_VERSION).tar.gz
 PKG_SOURCE_URL:=http://www.iana.org/time-zones/repository/releases
-PKG_HASH:=05d9092c90dcf9ec4f3ccfdea80c7dcea5e882b3b105c3422da172aaa9a50c64
+PKG_HASH:=7890ac105f1aa4a5d15c5be2409580af401ee2f3fffe2a1e4748af589e194bd9
 
 include $(INCLUDE_DIR)/package.mk
 
 define Download/tzcode
    FILE=$(PKG_SOURCE_CODE)
    URL=$(PKG_SOURCE_URL)
-   HASH:=2e479d409337da41408629ce6c3b4d8410b10ba6d4431d862e22d2b137d7756d
+   HASH:=9aa97f40f7b5d90c76c1af80295194daef9c427302f50c278d10ca31c3ccbfe4
 endef
 
 $(eval $(call Download,tzcode))
@@ -127,7 +127,7 @@ define Build/Compile
 		$(HOST_CONFIGURE_OPTS) \
 		CC="$(HOSTCC)" \
 		LD="\$$$$(CC)" \
-		CPPFLAGS="$(HOST_CPPFLAGS) -DHAVE_SNPRINTF=1" \
+		CPPFLAGS="$(HOST_CPPFLAGS) -DHAVE_SNPRINTF=1 -DZIC_BLOAT_DEFAULT='\"fat\"'" \
 		LDFLAGS="$(HOST_LDFLAGS)" \
 		TOPDIR="$(PKG_INSTALL_DIR)" \
 		TZDIR="$(PKG_INSTALL_DIR)/zoneinfo" \
