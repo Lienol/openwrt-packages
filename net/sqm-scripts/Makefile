@@ -41,4 +41,8 @@ define Package/sqm-scripts/conffiles
 /etc/sqm/sqm.conf
 endef
 
+define Package/sqm-scripts/install
+	make -C $(PKG_BUILD_DIR) DESTDIR=$(1) PLATFORM=openwrt install
+endef
+
 $(eval $(call BuildPackage,sqm-scripts))
