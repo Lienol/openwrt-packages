@@ -27,15 +27,15 @@ define Package/frp/install
 	$(INSTALL_BIN) $(GO_PKG_BUILD_BIN_DIR)/$(2) $(1)/usr/bin/
 	$(INSTALL_DIR) $(1)/etc/frp/$(2).d/
 	$(INSTALL_DATA) $(PKG_BUILD_DIR)/conf/$(2)_full.ini $(1)/etc/frp/$(2).d/
-	$(INSTALL_DIR) $(1)/etc/config/
-	$(INSTALL_CONF) ./files/$(2).config $(1)/etc/config/$(2)
-	$(INSTALL_DIR) $(1)/etc/init.d/
-	$(INSTALL_BIN) ./files/$(2).init $(1)/etc/init.d/$(2)
+#	$(INSTALL_DIR) $(1)/etc/config/
+#	$(INSTALL_CONF) ./files/$(2).config $(1)/etc/config/$(2)
+#	$(INSTALL_DIR) $(1)/etc/init.d/
+#	$(INSTALL_BIN) ./files/$(2).init $(1)/etc/init.d/$(2)
 
-	if [ -r ./files/$(2).uci-defaults ]; then \
-		$(INSTALL_DIR) $(1)/etc/uci-defaults; \
-		$(INSTALL_DATA) ./files/$(2).uci-defaults $(1)/etc/uci-defaults/$(2); \
-	fi
+#	if [ -r ./files/$(2).uci-defaults ]; then \
+#		$(INSTALL_DIR) $(1)/etc/uci-defaults; \
+#		$(INSTALL_DATA) ./files/$(2).uci-defaults $(1)/etc/uci-defaults/$(2); \
+#	fi
 endef
 
 define Package/frp/template
