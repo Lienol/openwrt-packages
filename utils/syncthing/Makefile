@@ -44,8 +44,8 @@ define Package/syncthing
 endef
 
 define Package/syncthing/conffiles
-/etc/config/syncthing
-/etc/syncthing
+#/etc/config/syncthing
+#/etc/syncthing
 endef
 
 define Package/syncthing/description
@@ -58,7 +58,7 @@ endef
 define Package/syncthing/install
 	$(call GoPackage/Package/Install/Bin,$(1))
 
-	$(CP) ./files/* $(1)/
+#	$(CP) ./files/* $(1)/
 endef
 
 $(eval $(call GoBinPackage,syncthing))
