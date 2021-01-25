@@ -49,7 +49,9 @@ $(call Package/wget/Default)
   DEPENDS+= +libopenssl +librt
   TITLE+= (with SSL support)
   VARIANT:=ssl
-  ALTERNATIVES:=300:/usr/bin/wget:/usr/libexec/wget-ssl
+  ALTERNATIVES:=\
+    300:/usr/bin/wget:/usr/libexec/wget-ssl \
+    300:/usr/bin/wget-ssl:/usr/libexec/wget-ssl
 endef
 
 define Package/wget-ssl/description
@@ -61,7 +63,9 @@ define Package/wget-nossl
 $(call Package/wget/Default)
   TITLE+= (without SSL support)
   VARIANT:=nossl
-  ALTERNATIVES:=300:/usr/bin/wget:/usr/libexec/wget-nossl
+  ALTERNATIVES:=\
+    300:/usr/bin/wget:/usr/libexec/wget-nossl \
+    300:/usr/bin/wget-nossl:/usr/libexec/wget-nossl
 endef
 
 define Package/wget-nossl/description
