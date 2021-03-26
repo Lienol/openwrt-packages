@@ -10,21 +10,41 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        arch:
-          - arc_archs
-          - arm_cortex-a9_vfpv3-d16
-          - mips_24kc
-          - powerpc_464fp
-          - powerpc_8540
-        runtime_test: [false]
         include:
+          - arch: arc_archs
+            target: archs38-generic
+            runtime_test: false
+
+          - arch: arm_cortex-a9_vfpv3-d16
+            target: mvebu-cortexa9
+            runtime_test: false
+
+          - arch: mips_24kc
+            target: ath79-generic
+            runtime_test: false
+
+          - arch: powerpc_464fp
+            target: apm821xx-nand
+            runtime_test: false
+
+          - arch: powerpc_8540
+            target: mpc85xx-p1010
+            runtime_test: false
+
           - arch: aarch64_cortex-a53
+            target: mvebu-cortexa53
             runtime_test: true
+
           - arch: arm_cortex-a15_neon-vfpv4
+            target: armvirt-32
             runtime_test: true
+
           - arch: i386_pentium-mmx
+            target: x86-geode
             runtime_test: true
+
           - arch: x86_64
+            target: x86-64
             runtime_test: true
 
     steps:
@@ -41,7 +61,9 @@ jobs:
       - name: Determine changed packages
         run: |
           # only detect packages with changes
-          PKG_ROOTS=$(find . -name Makefile | grep -v ".*/src/Makefile" | sed -e 's@./\(.*\)/Makefile@\1/@')
+          PKG_ROOTS=$(find . -name Makefile | \
+            grep -v ".*/src/Makefile" | \
+            sed -e 's@./\(.*\)/Makefile@\1/@')
           CHANGES=$(git diff --diff-filter=d --name-only origin/$BRANCH)
 
           for ROOT in $PKG_ROOTS; do
@@ -55,7 +77,7 @@ jobs:
 
           # fallback to test packages if nothing explicitly changes this is
           # should run if other mechanics in packages.git changed
-          PACKAGES="${PACKAGES:-vim tmux bmon}"
+          PACKAGES="${PACKAGES:-vim attendedsysupgrade-common bmon}"
 
           echo "Building $PACKAGES"
           echo "PACKAGES=$PACKAGES" >> $GITHUB_ENV
