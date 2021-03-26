@@ -13,7 +13,12 @@ endef
 
 define Build/Prepare
 	$(Build/Prepare/Default)
-	( cd $(PKG_BUILD_DIR); $(STAGING_DIR)/usr/bin/phpize8 )
+	$(if $(QUILT),,( cd $(PKG_BUILD_DIR); $(STAGING_DIR)/usr/bin/phpize8 ))
+endef
+
+define Build/Configure
+	$(if $(QUILT),( cd $(PKG_BUILD_DIR); $(STAGING_DIR)/usr/bin/phpize8 ))
+	$(Build/Configure/Default)
 endef
 
 CONFIGURE_VARS+= \
