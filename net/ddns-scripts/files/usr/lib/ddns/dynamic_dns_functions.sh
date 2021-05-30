@@ -21,7 +21,11 @@
 . /lib/functions/network.sh
 
 # GLOBAL VARIABLES #
-VERSION="2.7.8-13"
+if [ -f "/usr/share/ddns/version" ]; then
+	VERSION="$(cat "/usr/share/ddns/version")"
+else
+	VERSION="unknown"
+fi
 SECTION_ID=""		# hold config's section name
 VERBOSE=0		# default mode is log to console, but easily changed with parameter
 MYPROG=$(basename $0)	# my program call name
@@ -76,23 +80,23 @@ DNS_CHARSET_DOMAIN="[@a-zA-Z0-9._*-]"
 LUCI_HELPER=$(printf %s "$MYPROG" | grep -i "luci")
 
 # Name Server Lookup Programs
-BIND_HOST=$(which host)
-KNOT_HOST=$(which khost)
-DRILL=$(which drill)
-HOSTIP=$(which hostip)
-NSLOOKUP=$(which nslookup)
+BIND_HOST=$(command -v host)
+KNOT_HOST=$(command -v khost)
+DRILL=$(command -v drill)
+HOSTIP=$(command -v hostip)
+NSLOOKUP=$(command -v nslookup)
 
 # Transfer Programs
-WGET=$(which wget)
-WGET_SSL=$(which wget-ssl)
+WGET=$(command -v wget)
+$WGET -V 2>/dev/null | grep -F -q +https && WGET_SSL=$WGET
 
-CURL=$(which curl)
+CURL=$(command -v curl)
 # CURL_SSL not empty then SSL support available
 CURL_SSL=$($CURL -V 2>/dev/null | grep -F "https")
 # CURL_PROXY not empty then Proxy support available
 CURL_PROXY=$(find /lib /usr/lib -name libcurl.so* -exec strings {} 2>/dev/null \; | grep -im1 "all_proxy")
 
-UCLIENT_FETCH=$(which uclient-fetch)
+UCLIENT_FETCH=$(command -v uclient-fetch)
 
 # Global configuration settings
 # allow NON-public IP's
@@ -317,45 +321,49 @@ urlencode() {
 }
 
 # extract url or script for given DDNS Provider from
-# file /etc/ddns/services for IPv4 or from
-# file /etc/ddns/services_ipv6 for IPv6
-# $1	Name of Variable to store url to
-# $2	Name of Variable to store script to
-# $3	Name of Variable to store service answer to
+# $1	Name of the provider
+# $2	Provider directory
+# $3	Name of Variable to store url to
+# $4	Name of Variable to store script to
+# $5	Name of Variable to store service answer to
 get_service_data() {
-	local __FILE __SERVICE __DATA __ANSWER __URL __SCRIPT __PIPE
+	local provider="$1"
+	shift
+	local dir="$1"
+	shift
+
+	. /usr/share/libubox/jshn.sh
+	local name data url answer script
 
 	[ $# -ne 3 ] && write_log 12 "Error calling 'get_service_data()' - wrong number of parameters"
 
-	__FILE="/etc/ddns/services"				# IPv4
-	[ $use_ipv6 -ne 0 ] && __FILE="/etc/ddns/services_ipv6"	# IPv6
+	[ -f "${dir}/${provider}.json" ] || {
+		eval "$1=\"\""
+		eval "$2=\"\""
+		eval "$3=\"\""
+		return 1
+	}
 
-	# workaround with variables; pipe create subshell with no give back of variable content
-	__PIPE="$ddns_rundir/pipe_$$"
-	mkfifo "$__PIPE"
+	json_load_file "${dir}/${provider}.json"
+	json_get_var name "name"
+	if [ "$use_ipv6" -eq "1" ]; then
+		json_select "ipv6"
+	else
+		json_select "ipv4"
+	fi
+	json_get_var data "url"
+	json_get_var answer "answer"
+	json_select ".."
+	json_cleanup
 
-	# only grep without # or whitespace at linestart | remove "
-	sed '/^#/d; /^[ \t]*$/d; s/\"//g' "$__FILE" > "$__PIPE" &
+	# check if URL or SCRIPT is given
+	url=$(echo "$data" | grep "^http")
+	[ -z "$url" ] && script="/usr/lib/ddns/${data}"
 
-	while read __SERVICE __DATA __ANSWER; do
-		if [ "$__SERVICE" = "$service_name" ]; then
-			# check if URL or SCRIPT is given
-			__URL=$(echo "$__DATA" | grep "^http")
-			[ -z "$__URL" ] && __SCRIPT="/usr/lib/ddns/$__DATA"
-
-			eval "$1=\"$__URL\""
-			eval "$2=\"$__SCRIPT\""
-			eval "$3=\"$__ANSWER\""
-			rm "$__PIPE"
-			return 0
-		fi
-	done < "$__PIPE"
-	rm "$__PIPE"
-
-	eval "$1=\"\""	# no service match clear variables
-	eval "$2=\"\""
-	eval "$3=\"\""
-	return 1
+	eval "$1=\"$url\""
+	eval "$2=\"$script\""
+	eval "$3=\"$answer\""
+	return 0
 }
 
 # Calculate seconds from interval and unit
@@ -495,8 +503,8 @@ sanitize_variable() {
 verify_host_port() {
 	local __HOST=$1
 	local __PORT=$2
-	local __NC=$(which nc)
-	local __NCEXT=$($(which nc) --help 2>&1 | grep "\-w" 2>/dev/null)	# busybox nc compiled with extensions
+	local __NC=$(command -v nc)
+	local __NCEXT=$($(command -v nc) --help 2>&1 | grep "\-w" 2>/dev/null)	# busybox nc compiled with extensions
 	local __IP __IPV4 __IPV6 __RUNPROG __PROG __ERR
 	# return codes
 	# 1	system specific error
@@ -703,9 +711,12 @@ do_transfer() {
 
 	[ $# -ne 1 ] && write_log 12 "Error in 'do_transfer()' - wrong number of parameters"
 
+	# Use ip_network as default for bind_network if not separately specified
+	[ -z "$bind_network" ] && [ "$ip_source" = "network" ] && [ "$ip_network" ] && bind_network="$ip_network"
+
 	# lets prefer GNU Wget because it does all for us - IPv4/IPv6/HTTPS/PROXY/force IP version
-	if [ -n "$WGET_SSL" -a $USE_CURL -eq 0 ]; then 			# except global option use_curl is set to "1"
-		__PROG="$WGET_SSL --hsts-file=/tmp/.wget-hsts -nv -t 1 -O $DATFILE -o $ERRFILE"	# non_verbose no_retry outfile errfile
+	if [ -n "$WGET_SSL" ] && [ $USE_CURL -eq 0 ]; then 			# except global option use_curl is set to "1"
+		__PROG="$WGET --hsts-file=/tmp/.wget-hsts -nv -t 1 -O $DATFILE -o $ERRFILE"	# non_verbose no_retry outfile errfile
 		# force network/ip to use for communication
 		if [ -n "$bind_network" ]; then
 			local __BINDIP
@@ -925,7 +936,7 @@ get_local_ip () {
 			[ -n "$__DATA" ] && write_log 7 "Local IP '$__DATA' detected on network '$ip_network'"
 		elif [ -n "$ip_interface" -a "$ip_source" = "interface" ]; then
 			local __DATA4=""; local __DATA6=""
-			if [ -n "$(which ip)" ]; then		# ip program installed
+			if [ -n "$(command -v ip)" ]; then		# ip program installed
 				write_log 7 "#> ip -o addr show dev $ip_interface scope global >$DATFILE 2>$ERRFILE"
 				ip -o addr show dev $ip_interface scope global >$DATFILE 2>$ERRFILE
 				__ERR=$?
@@ -1128,7 +1139,7 @@ get_registered_ip() {
 		__RUNPROG="$__PROG $lookup_host >$DATFILE 2>$ERRFILE"
 		__PROG="hostip"
 	elif [ -n "$NSLOOKUP" ]; then	# last use BusyBox nslookup
-		NSLOOKUP_MUSL=$($(which nslookup) localhost 2>&1 | grep -F "(null)")	# not empty busybox compiled with musl
+		NSLOOKUP_MUSL=$($(command -v nslookup) localhost 2>&1 | grep -F "(null)")	# not empty busybox compiled with musl
 		[ $force_dnstcp -ne 0 ] && \
 			write_log 14 "Busybox nslookup - no support for 'DNS over TCP'"
 		[ -n "$NSLOOKUP_MUSL" -a -n "$dns_server" ] && \
