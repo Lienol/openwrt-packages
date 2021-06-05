@@ -8,7 +8,7 @@ PKG_SOURCE:=$(PKG_NAME)-$(PKG_VERSION).tar.bz2
 PKG_SOURCE_URL:=https://downloads.powerdns.com/releases/
 PKG_HASH:=a7783a04d8d4ad2b0168ffaaf85ef95d5f557057b0462280684dd799d0cdd292
 
-PKG_MAINTAINER:=James Taylor <james@jtaylor.id.au>
+PKG_MAINTAINER:=Peter van Dijk <peter.van.dijk@powerdns.com>
 PKG_LICENSE:=GPL-2.0-only
 PKG_LICENSE_FILES:=COPYING
 PKG_CPE_ID:=cpe:/a:powerdns:dnsdist
@@ -82,7 +82,7 @@ menu "Configuration"
 		default y
 
 	config DNSDIST_SODIUM
-		bool "Build with libsodium
+		bool "Build with libsodium"
 		help
 			"Build with libsodium - for encrypted console connections, and DNSCrypt"
 		default y
