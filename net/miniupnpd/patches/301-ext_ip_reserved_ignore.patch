@@ -1,0 +1,110 @@
+commit cb046cfef1d6b954d3fc09f09a1fc3a7ffeb7593
+Author: Chen Minqiang <ptpt52@gmail.com>
+Date:   Sun Jul 5 10:42:52 2020 +0800
+
+    options: ext_ip_reserved_ignore support
+    
+    This make the port forwarding force to work even
+    when the router is behind NAT
+    
+    Signed-off-by: Chen Minqiang <ptpt52@gmail.com>
+
+--- a/getifaddr.c
++++ b/getifaddr.c
+@@ -26,6 +26,7 @@
+ #if defined(USE_GETIFADDRS) || defined(ENABLE_IPV6) || defined(ENABLE_PCP)
+ #include <ifaddrs.h>
+ #endif
++#include "upnpglobalvars.h"
+ 
+ int
+ getifaddr(const char * ifname, char * buf, int len,
+@@ -315,6 +316,11 @@ addr_is_reserved(struct in_addr * addr)
+ 	uint32_t address = ntohl(addr->s_addr);
+ 	size_t i;
+ 
++	if(GETFLAG(EXTIPRESERVEDIGNOREMASK)) {
++		syslog(LOG_DEBUG, "private/reserved address checking is ignored");
++		return 0;
++	}
++
+ 	for (i = 0; i < sizeof(reserved)/sizeof(reserved[0]); ++i) {
+ 		if ((address >> reserved[i].rmask) == (reserved[i].address >> reserved[i].rmask))
+ 			return 1;
+--- a/miniupnpd.c
++++ b/miniupnpd.c
+@@ -1345,6 +1345,10 @@ init(int argc, char * * argv, struct run
+ 				if(strcmp(ary_options[i].value, "yes") == 0)
+ 					SETFLAG(ALLOWPRIVATEIPV4MASK);
+ 				break;
++			case UPNPEXT_IP_RESERVED_IGNORE:
++				if(strcmp(ary_options[i].value, "yes") == 0)
++					SETFLAG(EXTIPRESERVEDIGNOREMASK);
++				break;
+ 			case UPNPEXT_PERFORM_STUN:
+ 				if(strcmp(ary_options[i].value, "yes") == 0)
+ 					SETFLAG(PERFORMSTUNMASK);
+--- a/miniupnpd.conf
++++ b/miniupnpd.conf
+@@ -17,6 +17,8 @@
+ # Setting ext_ip is also useful in double NAT setup, you can declare here
+ # the public IP address.
+ #ext_ip=
++#ignore even if ext_ip is reserved: default is no
++#ext_ip_reserved_ignore=yes
+ 
+ # Allow private IP address on external interface. When set to yes, program
+ # won't just disable port forwarding when external address is private IP.
+--- a/options.c
++++ b/options.c
+@@ -35,6 +35,7 @@ static const struct {
+ 	{ UPNPEXT_IFNAME6, "ext_ifname6" },
+ #endif
+ 	{ UPNPEXT_IP,	"ext_ip" },
++	{ UPNPEXT_IP_RESERVED_IGNORE, "ext_ip_reserved_ignore" },
+ 	{ UPNPEXT_ALLOW_PRIVATE_IPV4, "ext_allow_private_ipv4" },
+ 	{ UPNPEXT_PERFORM_STUN, "ext_perform_stun" },
+ 	{ UPNPEXT_STUN_HOST, "ext_stun_host" },
+--- a/options.h
++++ b/options.h
+@@ -21,6 +21,7 @@ enum upnpconfigoptions {
+ 	UPNPEXT_IFNAME6,		/* ext_ifname6 */
+ #endif
+ 	UPNPEXT_IP,				/* ext_ip */
++	UPNPEXT_IP_RESERVED_IGNORE, /* ignore if ext_ip is reserved */
+ 	UPNPEXT_ALLOW_PRIVATE_IPV4,	/* ext_allow_private_ipv4 */
+ 	UPNPEXT_PERFORM_STUN,		/* ext_perform_stun */
+ 	UPNPEXT_STUN_HOST,		/* ext_stun_host */
+--- a/testgetifaddr.c
++++ b/testgetifaddr.c
+@@ -14,6 +14,8 @@
+ #include "getifaddr.h"
+ #include "getconnstatus.h"
+ 
++int runtime_flags = 0;
++
+ #if defined(__sun)
+ /* solaris 10 does not define LOG_PERROR */
+ #define LOG_PERROR 0
+--- a/testportinuse.c
++++ b/testportinuse.c
+@@ -18,6 +18,8 @@
+ struct lan_addr_list lan_addrs;
+ time_t startup_time = 0;
+ 
++int runtime_flags = 0;
++
+ int main(int argc, char * * argv)
+ {
+ #ifndef CHECK_PORTINUSE
+--- a/upnpglobalvars.h
++++ b/upnpglobalvars.h
+@@ -90,6 +90,8 @@ extern int runtime_flags;
+ #define ALLOWPRIVATEIPV4MASK 0x2000
+ #define ALLOWFILTEREDSTUNMASK 0x4000
+ 
++#define EXTIPRESERVEDIGNOREMASK 0x2000
++
+ #define SETFLAG(mask)	runtime_flags |= mask
+ #define GETFLAG(mask)	(runtime_flags & mask)
+ #define CLEARFLAG(mask)	runtime_flags &= ~mask
