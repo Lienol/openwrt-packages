@@ -8,13 +8,13 @@
 include $(TOPDIR)/rules.mk
 
 PKG_NAME:=alsa-lib
-PKG_VERSION:=1.2.5
+PKG_VERSION:=1.2.5.1
 PKG_RELEASE:=$(AUTORELEASE)
 
 PKG_SOURCE:=$(PKG_NAME)-$(PKG_VERSION).tar.bz2
 PKG_SOURCE_URL:=ftp://ftp.alsa-project.org/pub/lib/ \
 		http://distfiles.gentoo.org/distfiles/
-PKG_HASH:=9092894a8c083b33acf8d6deb901b58f5d20d6da583789f814e8e46f2850ef18
+PKG_HASH:=628421d950cecaf234de3f899d520c0a6923313c964ad751ffac081df331438e
 
 PKG_MAINTAINER:=Ted Hess <thess@kitschensync.net>, \
 		Peter Wagner <tripolar@gmx.at>
@@ -100,10 +100,13 @@ define Package/alsa-lib/install
 		$(PKG_INSTALL_DIR)/usr/lib/libatopology.so.* \
 		$(1)/usr/lib/
 
-	$(INSTALL_DIR) $(1)/usr/share/alsa/{cards,pcm}
+	$(INSTALL_DIR) $(1)/usr/share/alsa/{cards,ctl,pcm}
 	$(INSTALL_DATA) \
 		$(PKG_INSTALL_DIR)/usr/share/alsa/alsa.conf \
 		$(1)/usr/share/alsa/
+	$(INSTALL_DATA) \
+		$(PKG_INSTALL_DIR)/usr/share/alsa/ctl/* \
+		$(1)/usr/share/alsa/ctl/
 	$(INSTALL_DATA) \
 		$(PKG_INSTALL_DIR)/usr/share/alsa/pcm/* \
 		$(1)/usr/share/alsa/pcm/
