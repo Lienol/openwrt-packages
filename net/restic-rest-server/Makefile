@@ -19,7 +19,6 @@ PKG_USE_MIPS16:=0
 
 GO_PKG:=github.com/restic/rest-server/
 GO_PKG_BUILD_PKG:=github.com/restic/rest-server/cmd/rest-server/
-GO_PKG_LDFLAGS:=-s -w
 GO_PKG_LDFLAGS_X:=main.version=$(PKG_VERSION)
 
 include $(INCLUDE_DIR)/package.mk

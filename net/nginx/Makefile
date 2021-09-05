@@ -116,7 +116,7 @@ define Package/nginx-all-module
   DEPENDS:=+libpcre +libopenssl +zlib +liblua +libpthread +libxml2 \
    +libubus +libblobmsg-json +libjson-c
   VARIANT:=all-module
-  PROVIDES:=nginx
+  PROVIDES:=nginx nginx-ssl
 endef
 
 Package/nginx-all-module/description = $(Package/nginx/description) \
