@@ -1,6 +1,7 @@
 #!/bin/sh /etc/rc.common
 
 START=98
+STOP=05
 USE_PROCD=1
 
 SAMBA_IFACE=""
@@ -26,7 +27,7 @@ smb_header() {
 	)
 
 	# we dont use netbios anymore as default and wsd/avahi is dns based
-	hostname="$(cat /proc/sys/kernel/hostname | tr -d '{};%?=#\n')"
+	hostname="$(sed 's/\..*//' /proc/sys/kernel/hostname | tr -d '{};%?=#\n')"
 
 	config_get_sane workgroup "$1" workgroup "WORKGROUP"
 	config_get_sane description "$1" description "Samba on OpenWrt"
@@ -60,8 +61,6 @@ smb_header() {
 			printf "\tmin receivefile size = 131072\n" # allows zero-copy writes via fs
 			printf "\tfake oplocks = Yes\n" # may corrupt files for simultanous writes to the same files by multiple clients, but might also see big speed boost
 			printf "\tuse sendfile = Yes\n" # enable sendfile?
-			# Removed in 4.12.x in favor of VFS io_uring ; this is per file, so may increase memory useage on many simultanous oplocked files!
-			printf "\twrite cache size = 262144\n" # adds a write cache buffer per file for oplocked files, flushes if size is exhausted
 		fi
 
 		if [ "$DISABLE_NETBIOS" -eq 1 ] || [ ! -x /usr/sbin/nmbd ]; then
@@ -143,6 +142,17 @@ smb_add_share() {
 			if [ "$timemachine" -eq 1 ]; then
 				printf "\tfruit:time machine = yes\n"
 				[ -n "$timemachine_maxsize" ] && printf "\tfruit:time machine max size = %sG\n" "${timemachine_maxsize}"
+			fi
+		fi
+		
+		# always enable io_uring if we can ("should" fail silently via samba module load if no kernel support)
+		if [ "$DISABLE_ASYNC_IO" -ne 1 ] && [ -e /usr/lib/samba/vfs/io_uring.so ] ; then
+			logger -p daemon.info -t 'samba4-server' "io_uring module found, enabling VFS io_uring. (also needs Kernel 5.4+ Support)"
+			# make sure its last in list
+			if [ -n "$vfs_objects" ]; then
+				vfs_objects="$vfs_objects io_uring"
+			else
+				vfs_objects="io_uring"
 			fi
 		fi
 
