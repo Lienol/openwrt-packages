@@ -44,7 +44,7 @@ define Package/socat/config
 config SOCAT_SSL
         bool "SSL support"
         depends on PACKAGE_socat
-        default n
+        default y
         help
           Implements SSL support in socat (using libopenssl).
 endef
