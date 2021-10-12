@@ -84,10 +84,6 @@ CONFIGURE_VARS += \
 define Package/socat/install
 	$(INSTALL_DIR) $(1)/usr/bin
 	$(INSTALL_BIN) $(PKG_INSTALL_DIR)/usr/bin/socat $(1)/usr/bin/
-	$(INSTALL_DIR) $(1)/etc/config
-	$(INSTALL_CONF) ./files/socat.config $(1)/etc/config/socat
-	$(INSTALL_DIR) $(1)/etc/init.d
-	$(INSTALL_BIN) ./files/socat.init $(1)/etc/init.d/socat
 endef
 
 $(eval $(call BuildPackage,socat))
