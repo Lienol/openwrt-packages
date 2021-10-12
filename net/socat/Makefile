@@ -44,7 +44,7 @@ define Package/socat/config
 config SOCAT_SSL
         bool "SSL support"
         depends on PACKAGE_socat
-        default n
+        default y
         help
           Implements SSL support in socat (using libopenssl).
 endef
@@ -87,10 +87,6 @@ CONFIGURE_VARS += \
 define Package/socat/install
 	$(INSTALL_DIR) $(1)/usr/bin
 	$(INSTALL_BIN) $(PKG_INSTALL_DIR)/usr/bin/socat $(1)/usr/bin/
-	$(INSTALL_DIR) $(1)/etc/config
-	$(INSTALL_CONF) ./files/socat.config $(1)/etc/config/socat
-	$(INSTALL_DIR) $(1)/etc/init.d
-	$(INSTALL_BIN) ./files/socat.init $(1)/etc/init.d/socat
 endef
 
 $(eval $(call BuildPackage,socat))
