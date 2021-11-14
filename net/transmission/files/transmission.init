@@ -170,7 +170,7 @@ start_service() {
 }
 
 reload_service() {
-	procd_send_signal "$PROG"
+	restart
 }
 
 service_triggers() {
