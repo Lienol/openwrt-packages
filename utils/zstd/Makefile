@@ -1,12 +1,12 @@
 include $(TOPDIR)/rules.mk
 
 PKG_NAME:=zstd
-PKG_VERSION:=1.4.5
-PKG_RELEASE:=2
+PKG_VERSION:=1.5.0
+PKG_RELEASE:=$(AUTORELEASE)
 
 PKG_SOURCE:=$(PKG_NAME)-$(PKG_VERSION).tar.gz
 PKG_SOURCE_URL:=https://github.com/facebook/zstd/releases/download/v$(PKG_VERSION)
-PKG_HASH:=98e91c7c6bf162bf90e4e70fdbc41a8188b9fa8de5ad840c401198014406ce9e
+PKG_HASH:=5194fbfa781fcf45b98c5e849651aa7b3b0a008c6b72d4a0db760f3002291e94
 
 PKG_MAINTAINER:=
 PKG_LICENSE:=GPL-2.0-or-later
@@ -64,16 +64,15 @@ ifeq ($(CONFIG_ZSTD_OPTIMIZE_O3),y)
 TARGET_CFLAGS:= $(filter-out -O%,$(TARGET_CFLAGS)) -O3
 endif
 
-TARGET_CFLAGS += $(if $(CONFIG_USE_UCLIBC),-D_BSD_SOURCE)
-
 MESON_ARGS += \
-	-Dlegacy_level=1 \
+	-Dlegacy_level=7 \
 	-Ddebug_level=0 \
 	-Dbacktrace=false \
 	-Dstatic_runtime=false \
 	-Dbin_programs=true \
 	-Dbin_tests=false \
-	-Dbin_control=false \
+	-Dbin_contrib=false \
+	-Dmulti_thread=enabled \
 	-Dzlib=disabled \
 	-Dlzma=disabled \
 	-Dlz4=disabled \
