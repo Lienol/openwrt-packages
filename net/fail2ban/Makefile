@@ -7,50 +7,41 @@ include $(TOPDIR)/rules.mk
 
 PKG_NAME:=fail2ban
 PKG_VERSION:=0.11.2
-PKG_RELEASE:=1
-PKGARCH:=ALL
+PKG_RELEASE:=$(AUTORELEASE)
 
-PKG_SOURCE_PROTO:=git
-PKG_SOURCE_VERSION:=$(PKG_VERSION)
-PKG_SOURCE_URL:=https://github.com/fail2ban/fail2ban
-PKG_MIRROR_HASH:=1899888a178e2a7d8b7234afcd96387559a7781fb4aa621c9288258e74753f47
+PKG_SOURCE:=$(PKG_NAME)-$(PKG_VERSION).tar.gz
+PKG_SOURCE_URL:=https://codeload.github.com/fail2ban/fail2ban/tar.gz/$(PKG_VERSION)?
+PKG_HASH:=383108e5f8644cefb288537950923b7520f642e7e114efb843f6e7ea9268b1e0
 
 PKG_MAINTAINER:=Gerald Kerma <gandalf@gk2.net>
-PKG_LICENSE:=GPL-2.0
-PKG_LICENSE_FILES:=LICENSE.txt
+PKG_LICENSE:=GPL-2.0-or-later
+PKG_LICENSE_FILES:=COPYING
 
-#PKG_BUILD_DEPENDS:=python python-setuptools
-
-#include $(TOPDIR)/feeds/packages/lang/python/pypi.mk
 include $(INCLUDE_DIR)/package.mk
-include $(TOPDIR)/feeds/packages/lang/python/python3-package.mk
-
-#PKG_BUILD_DIR:=$(BUILD_DIR)/$(BUILD_VARIANT)-$(PKG_NAME)-$(PKG_VERSION)
-#PKG_UNPACK:=$(HOST_TAR) -C $(PKG_BUILD_DIR) --strip-components=1 -xzf $(DL_DIR)/$(PKG_SOURCE)
+include ../../lang/python/python3-package.mk
 
 define Package/fail2ban
-	SECTION:=net
-	CATEGORY:=Network
-	TITLE:=ban hosts that cause multiple authentication errors
-	URL:=https://www.fail2ban.org/
-	DEPENDS:= \
-		+libinotifytools	\
-		+python3-pyinotify	\
-		+python3-light		\
-		+python3-dns		\
-		+python3-ctypes		\
-		+python3-distutils	\
-		+python3-email		\
-		+python3-logging	\
-		+python3-sqlite3	\
-		+python3-urllib		\
-		+python3-lib2to3	\
-		+python3-setuptools
-	VARIANT:=python3
+  SECTION:=net
+  CATEGORY:=Network
+  TITLE:=ban hosts that cause multiple authentication errors
+  URL:=https://www.fail2ban.org/
+  DEPENDS:= \
+  +libinotifytools \
+  +python3-pyinotify \
+  +python3-light \
+  +python3-dns \
+  +python3-ctypes \
+  +python3-distutils \
+  +python3-email \
+  +python3-logging \
+  +python3-sqlite3 \
+  +python3-urllib \
+  +python3-lib2to3 \
+  +python3-setuptools
 endef
 
 define Package/fail2ban/description
-Fail2Ban scans log files like /var/log/auth.log and bans IP addresses conducting too many failed login attempts.
+  Fail2Ban scans log files like /var/log/auth.log and bans IP addresses conducting too many failed login attempts.
 endef
 
 define Package/fail2ban/conffiles
