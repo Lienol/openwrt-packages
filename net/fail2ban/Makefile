@@ -38,7 +38,7 @@ define Package/fail2ban
   +python3-urllib \
   +python3-lib2to3 \
   +python3-setuptools
-VARIANT:=python3
+  VARIANT:=python3
 endef
 
 define Package/fail2ban/description
