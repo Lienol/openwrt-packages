@@ -8,17 +8,20 @@
 include $(TOPDIR)/rules.mk
 
 PKG_NAME:=wget
-PKG_VERSION:=1.20.3
-PKG_RELEASE:=6
+PKG_VERSION:=1.21.2
+PKG_RELEASE:=$(AUTORELEASE)
 
 PKG_SOURCE:=$(PKG_NAME)-$(PKG_VERSION).tar.gz
 PKG_SOURCE_URL:=@GNU/$(PKG_NAME)
-PKG_HASH:=31cccfc6630528db1c8e3a06f6decf2a370060b982841cfab2b8677400a5092e
+PKG_HASH:=e6d4c76be82c676dd7e8c61a29b2ac8510ae108a810b5d1d18fc9a1d2c9a2497
+
 PKG_MAINTAINER:=Peter Wagner <tripolar@gmx.at>
 PKG_LICENSE:=GPL-3.0-or-later
 PKG_LICENSE_FILES:=COPYING
-
 PKG_CPE_ID:=cpe:/a:gnu:wget
+
+PKG_INSTALL:=1
+PKG_BUILD_PARALLEL:=1
 
 include $(INCLUDE_DIR)/package.mk
 
@@ -98,16 +101,12 @@ endif
 
 define Package/wget-ssl/install
 	$(INSTALL_DIR) $(1)/usr/libexec
-	$(INSTALL_BIN) $(PKG_BUILD_DIR)/src/wget $(1)/usr/libexec/wget-ssl
-	$(INSTALL_DIR) $(1)/usr/bin
-	$(LN) /usr/libexec/wget-ssl $(1)/usr/bin/wget-ssl
+	$(INSTALL_BIN) $(PKG_INSTALL_DIR)/usr/bin/wget $(1)/usr/libexec/wget-ssl
 endef
 
 define Package/wget-nossl/install
 	$(INSTALL_DIR) $(1)/usr/libexec
-	$(INSTALL_BIN) $(PKG_BUILD_DIR)/src/wget $(1)/usr/libexec/wget-nossl
-	$(INSTALL_DIR) $(1)/usr/bin
-	$(LN) /usr/libexec/wget-ssl $(1)/usr/bin/wget-nossl
+	$(INSTALL_BIN) $(PKG_INSTALL_DIR)/usr/bin/wget $(1)/usr/libexec/wget-nossl
 endef
 
 $(eval $(call BuildPackage,wget-ssl))
