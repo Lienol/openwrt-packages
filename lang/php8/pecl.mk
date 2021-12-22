@@ -36,6 +36,8 @@ define PHP8PECLPackage
     ifneq ($(3),)
       DEPENDS+=$(3)
     endif
+
+    VARIANT:=php8
   endef
 
   define Package/php8-pecl-$(1)/install
