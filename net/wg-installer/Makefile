@@ -15,14 +15,14 @@ define Package/wg-installer/Default
 	TITLE:=WireGuard Installer
 	URL:=https://github.com/Freifunk-Spalter/
 	PKGARCH:=all
-	DEPENDS:=+kmod-wireguard +owipcalc
+	DEPENDS:=+kmod-wireguard +wireguard-tools +owipcalc
 endef
 
 define Package/wg-installer-server
 	$(call Package/wg-installer/Default)
 	TITLE+= (server)
 	MENU:=1
-	DEPENDS:=+rpcd +uhttpd +uhttpd-mod-ubus +owipcalc
+	DEPENDS+=+rpcd +uhttpd +uhttpd-mod-ubus
 endef
 
 define Package/wg-installer-server/install
@@ -50,7 +50,7 @@ endef
 
 define Package/wg-installer-server-hotplug-babeld
 	$(call Package/wg-installer-server)
-	DEPENDS:=wg-installer-server
+	DEPENDS:=wg-installer-server +coreutils-dirname +coreutils-realpath
 endef
 
 define Package/wg-installer-server-hotplug-babeld/install
@@ -60,7 +60,7 @@ endef
 
 define Package/wg-installer-server-hotplug-olsrd
 	$(call Package/wg-installer-server)
-	DEPENDS:=wg-installer-server
+	DEPENDS:=wg-installer-server +coreutils-dirname +coreutils-realpath
 endef
 
 define Package/wg-installer-server-hotplug-olsrd/install
@@ -71,7 +71,7 @@ endef
 define Package/wg-installer-client
 	$(call Package/wg-installer/Default)
 	TITLE+= (client)
-	DEPENDS:=+curl +wireguard-tools
+	DEPENDS+=+curl
 endef
 
 define Package/wg-installer-client/install
