@@ -1,22 +1,19 @@
 include $(TOPDIR)/rules.mk
 
 PKG_NAME:=libtorrent-rasterbar
-PKG_VERSION:=2.0.1
-PKG_RELEASE:=1
+PKG_VERSION:=2.0.6
+PKG_RELEASE:=$(AUTORELEASE)
 
 PKG_SOURCE:=$(PKG_NAME)-$(PKG_VERSION).tar.gz
 PKG_SOURCE_URL:=https://codeload.github.com/arvidn/libtorrent/tar.gz/v$(PKG_VERSION)?
-PKG_HASH:=cf906167e0b332681f6304a9bb740404a53bb0efed39897e1d2bd0f6f0d9e9cd
+PKG_HASH:=75b17d9db3adf0da5896edeaff4db3879f38ee66be953dc9567089db83a070be
 
 PKG_MAINTAINER:=David Yang <mmyangfl@gmail.com>
 PKG_LICENSE:=BSD-3-Clause
 PKG_LICENSE_FILES:=COPYING
 
-PKG_BUILD_PARALLEL:=1
-PKG_INSTALL:=1
-
 include $(INCLUDE_DIR)/package.mk
-include $(INCLUDE_DIR)/cmake.mk
+include ../../devel/ninja/ninja-cmake.mk
 
 define Package/libtorrent-rasterbar/Default
 	TITLE:=Rasterbar BitTorrent library
@@ -27,7 +24,7 @@ define Package/libtorrent-rasterbar
 	$(call Package/libtorrent-rasterbar/Default)
 	SECTION:=libs
 	CATEGORY:=Libraries
-	DEPENDS:=+boost-system +libopenssl
+	DEPENDS:=+boost-system +libopenssl +libatomic +libstdcpp
 endef
 
 #define Package/python3-libtorrent
@@ -50,11 +47,11 @@ endef
 #endef
 
 define Download/try_signal
-	VERSION:=2a99893f92b29a5948569cba1e16fd259dbc2016
+	VERSION:=751a7e5a5be14892bcfdff1e63c653bcbf71cf39
 	SUBDIR:=deps/try_signal
 	FILE:=$(PKG_NAME)-try_signal-$$(VERSION).tar.xz
 	URL:=https://github.com/arvidn/try_signal.git
-	MIRROR_HASH:=4dee408897de3475e6f7eca9c4e4617c3e746351d01cec3cccac38b9b4d38302
+	MIRROR_HASH:=32a432e35e81c79f21c49744f00696c112e0deab45d15d91c61ceb63fe25a5f8
 	PROTO:=git
 endef
 $(eval $(call Download,try_signal))
