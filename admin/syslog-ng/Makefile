@@ -1,7 +1,7 @@
 include $(TOPDIR)/rules.mk
 
 PKG_NAME:=syslog-ng
-PKG_VERSION:=3.37.1
+PKG_VERSION:=3.38.1
 PKG_RELEASE:=$(AUTORELEASE)
 
 PKG_MAINTAINER:=Josef Schlehofer <josef.schlehofer@nic.cz>
@@ -11,7 +11,7 @@ PKG_CPE_ID:=cpe:/a:balabit:syslog-ng
 
 PKG_SOURCE:=$(PKG_NAME)-$(PKG_VERSION).tar.gz
 PKG_SOURCE_URL:=https://github.com/syslog-ng/syslog-ng/releases/download/$(PKG_NAME)-$(PKG_VERSION)/
-PKG_HASH:=d67a320cb896cd5d62f24d9e1bec138847fa4618ae13a3946cae2b75c528ee14
+PKG_HASH:=5491f686d0b829b69b2e0fc0d66a62f51991aafaee005475bfa38fab399441f7
 
 PKG_BUILD_PARALLEL:=1
 PKG_INSTALL:=1
@@ -27,7 +27,7 @@ define Package/syslog-ng
   CATEGORY:=Administration
   TITLE:=A powerful syslog daemon
   URL:=https://www.syslog-ng.com/products/open-source-log-management/
-  DEPENDS:=+libpcre +glib2 +libopenssl +libpthread +librt +zlib +libdbi +libjson-c +libcurl +libuuid
+  DEPENDS:=+libpcre +glib2 +libopenssl +libpthread +librt +zlib +libdbi +libjson-c +libcurl +libuuid +SYSLOGNG_LOGROTATE:logrotate
 endef
 
 define Package/syslog-ng/description
@@ -42,10 +42,38 @@ define Package/syslog-ng/conffiles
 /etc/scl.conf
 endef
 
+define Package/syslog-ng/config
+config SYSLOGNG_LOGROTATE
+	bool "Logrotate support"
+	depends on PACKAGE_syslog-ng
+	default n
+	help
+	  It adds support for logrotate functionality.
+
+config SYSLOGNG_LOGROTATE_MAXSIZE
+	string "Maximum size of /var/log/messages log file"
+	depends on SYSLOGNG_LOGROTATE
+	default "1M"
+	help
+	  Log files are rotated when they grow bigger than defined size bytes.
+
+config SYSLOGNG_LOGROTATE_ROTATE_COUNT
+	int "Maximum rotation count for /var/log/messages log file"
+	depends on SYSLOGNG_LOGROTATE
+	default 1
+	help
+	  Log files are rotated count times before being removed or mailed to
+	  the address specified in a mail directive. If count is 0, old
+	  versions are removed rather than rotated.
+endef
+
 define Build/Configure
 	$(SED) 's,-I/usr/include,,' $(PKG_BUILD_DIR)/configure
 	$(Build/Configure/Default)
 endef
+
+LOGROTATE_MAXSIZE:=$(call qstrip,$(CONFIG_SYSLOGNG_LOGROTATE_MAXSIZE))
+LOGROTATE_ROTATE:=$(call qstrip,$(CONFIG_SYSLOGNG_LOGROTATE_ROTATE_COUNT))
 
 CONFIGURE_ARGS +=  \
 	--disable-afsnmp \
@@ -91,6 +119,14 @@ define Package/syslog-ng/install
 
 	$(INSTALL_DIR) $(1)/usr/share/syslog-ng/include/
 	$(CP) -r ./files/scl $(1)/usr/share/syslog-ng/include/
+
+ifneq ($(strip $(CONFIG_SYSLOGNG_LOGROTATE)),)
+	$(INSTALL_DIR) $(1)/etc/logrotate.d
+	sed \
+		-e 's#@MAXSIZE@#$(LOGROTATE_MAXSIZE)#g' \
+		-e 's#@ROTATE@#$(LOGROTATE_ROTATE)#g' \
+		./files/syslog-ng.logrotate > $(1)/etc/logrotate.d/syslog-ng.conf
+endif
 endef
 
 define Package/syslog-ng/postinst
