@@ -144,6 +144,11 @@ setup_dns() {
 }
 
 start_service() {
+	config_load "ocserv"
+	
+	config_get_bool enable "config" enable 0
+	[ $enable != 1 ] && return 1
+
 	local hostname iface
 
 	hostname=`uci show ddns 2>/dev/null|grep domain|head -1|cut -d '=' -f 2`
@@ -195,8 +200,6 @@ start_service() {
 		chmod 0700 /var/lib/ocserv
 		chown ocserv:ocserv /var/lib/ocserv
 	}
-
-	config_load "ocserv"
 
 	rm -f /var/etc/ocserv.conf
 	touch /var/etc/ocserv.conf
