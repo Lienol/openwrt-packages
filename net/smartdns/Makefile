@@ -6,13 +6,13 @@
 include $(TOPDIR)/rules.mk
 
 PKG_NAME:=smartdns
-PKG_VERSION:=1.2022.40
+PKG_VERSION:=Release41-RC1
 PKG_RELEASE:=1
 
 PKG_SOURCE_PROTO:=git
 PKG_SOURCE_URL:=https://www.github.com/pymumu/smartdns.git
-PKG_MIRROR_HASH:=af0303d995c3edfa0ce8d0e90abf6846a8ef1b978e7787965001a0597afc122f
-PKG_SOURCE_VERSION:=fffe4caf088e4f956eeecb9a3a3fd09a79aca6a9
+PKG_MIRROR_HASH:=b50eba705490614f10e15d287334faaff5b53bb0070b0f55ad3cb8ceb35ce2dd
+PKG_SOURCE_VERSION:=d2d7dac7e9e47b1bcaedaca4f8fdfeb0118f7e31
 
 PKG_MAINTAINER:=Nick Peng <pymumu@gmail.com>
 PKG_LICENSE:=GPL-3.0-or-later
@@ -58,4 +58,3 @@ define Package/smartdns/install
 endef
 
 $(eval $(call BuildPackage,smartdns))
-
