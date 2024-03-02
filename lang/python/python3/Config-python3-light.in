@@ -1,7 +1,7 @@
 menu "Configuration"
 
-config PYTHON3_HOST_PIP_CACHE_WORLD_READABLE
-	bool "Ensure host pip cache is world-readable"
+config PYTHON3_BLUETOOTH_SUPPORT
+	bool "Enable Bluetooth support"
 	default n
 
 endmenu
