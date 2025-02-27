@@ -156,7 +156,7 @@ Available commands:
 | adb_enabled        | 1, enabled                         | set to 0 to disable the adblock service                                                        |
 | adb_srcarc         | -, /etc/adblock/adblock.sources.gz | full path to the used adblock source archive                                                   |
 | adb_srcfile        | -, /tmp/adb_sources.json           | full path to the used adblock source file, which has a higher precedence than the archive file |
-| adb_dns            | -, auto-detected                   | 'dnsmasq', 'unbound', 'named', 'kresd' or 'raw'                                                |
+| adb_dns            | -, auto-detected                   | 'dnsmasq', 'unbound', 'named', 'kresd', 'smartdns' or 'raw'                                    |
 | adb_fetchutil      | -, auto-detected                   | 'uclient-fetch', 'wget', 'curl' or 'aria2c'                                                    |
 | adb_fetchparm      | -, auto-detected                   | manually override the config options for the selected download utility                         |
 | adb_fetchinsecure  | 0, disabled                        | don't check SSL server certificates during download                                            |
@@ -191,7 +191,6 @@ Available commands:
 | adb_mailsender     | no-reply@adblock                   | sender address for adblock notification E-Mails                                                |
 | adb_mailtopic      | adblock&nbsp;notification          | topic for adblock notification E-Mails                                                         |
 | adb_mailprofile    | adb_notify                         | mail profile used in 'msmtp' for adblock notification E-Mails                                  |
-| adb_mailcnt        | 0                                  | minimum domain count to trigger E-Mail notifications                                           |
 | adb_jail           | 0                                  | set to 1 to enable the additional, restrictive 'adb_list.jail' creation                        |
 | adb_jaildir        | /tmp                               | path for the generated jail list                                                               |
 
