@@ -53,7 +53,6 @@ for feed in allowlist ${ban_feed} blocklist; do
 	#
 	if [ "${feed}" = "allowlist" ] || [ "${feed}" = "blocklist" ]; then
 		for proto in 4MAC 6MAC 4 6; do
-			[ "${feed}" = "blocklist" ] && wait
 			f_down "${feed}" "${proto}" "-" "-" "inout"
 		done
 		continue
@@ -94,15 +93,14 @@ for feed in allowlist ${ban_feed} blocklist; do
 				f_down "${feed}.${asn}" "4" "${feed_url_4}" "${feed_rule_4}" "${feed_chain:-"in"}" "${feed_flag}"
 			done
 		else
-			(f_down "${feed}" "4" "${feed_url_4}" "${feed_rule_4}" "${feed_chain:-"in"}" "${feed_flag}") &
-		fi
-		if [ "${feed_url_4}" = "${feed_url_6}" ]; then
-			feed_url_6="local"
-			wait
-		else
-			hold="$((cnt % ban_cores))"
-			[ "${hold}" = "0" ] && wait
-			cnt="$((cnt + 1))"
+			if [ "${feed_url_4}" = "${feed_url_6}" ]; then
+				feed_url_6="local"
+				f_down "${feed}" "4" "${feed_url_4}" "${feed_rule_4}" "${feed_chain:-"in"}" "${feed_flag}"
+			else
+				(f_down "${feed}" "4" "${feed_url_4}" "${feed_rule_4}" "${feed_chain:-"in"}" "${feed_flag}") &
+				[ "${cnt}" -gt "${ban_cores}" ] && wait -n
+				cnt="$((cnt + 1))"
+			fi
 		fi
 	fi
 	if [ "${ban_protov6}" = "1" ] && [ -n "${feed_url_6}" ] && [ -n "${feed_rule_6}" ]; then
@@ -116,10 +114,9 @@ for feed in allowlist ${ban_feed} blocklist; do
 			done
 		else
 			(f_down "${feed}" "6" "${feed_url_6}" "${feed_rule_6}" "${feed_chain:-"in"}" "${feed_flag}") &
+			[ "${cnt}" -gt "${ban_cores}" ] && wait -n
+			cnt="$((cnt + 1))"
 		fi
-		cnt="$((cnt + 1))"
-		hold="$((cnt % ban_cores))"
-		[ "${hold}" = "0" ] && wait
 	fi
 done
 wait
@@ -133,14 +130,14 @@ f_log "info" "start banIP domain lookup"
 cnt="1"
 for list in allowlist blocklist; do
 	(f_lookup "${list}") &
-	hold="$((cnt % ban_cores))"
-	[ "${hold}" = "0" ] && wait
+	[ "${cnt}" -gt "${ban_cores}" ] && wait -n
 	cnt="$((cnt + 1))"
 done
 wait
 
 # end processing
 #
+f_log "info" "finish banIP processing"
 (
 	sleep 5
 	if [ "${ban_mailnotification}" = "1" ] && [ -n "${ban_mailreceiver}" ] && [ -x "${ban_mailcmd}" ]; then
