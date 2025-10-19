@@ -1,12 +1,12 @@
 include $(TOPDIR)/rules.mk
 
 PKG_NAME:=gperftools
-PKG_VERSION:=2.16
-PKG_RELEASE:=1
+PKG_VERSION:=2.17.2
+PKG_RELEASE:=2
 
 PKG_SOURCE:=$(PKG_NAME)-$(PKG_VERSION).tar.gz
 PKG_SOURCE_URL:=https://codeload.github.com/gperftools/gperftools/tar.gz/$(PKG_NAME)-$(PKG_VERSION)?
-PKG_HASH:=737be182b4e42f5c7f595da2a7aa59ce0489a73d336d0d16847f2aa52d5221b4
+PKG_HASH:=885dbbf1f25a922de0cdc78b0703c3ab93c43850e1d2f7c889e41be7c824c53d
 PKG_BUILD_DIR:=$(BUILD_DIR)/$(PKG_NAME)-$(PKG_NAME)-$(PKG_VERSION)
 
 PKG_MAINTAINER:=John Audia <therealgraysky@proton.me>
@@ -26,7 +26,7 @@ define Package/gperftools-headers
   SECTION:=libs
   TITLE:=Gperftools Headers
   URL:=https://github.com/gperftools/gperftools
-  DEPENDS:= @!(mips||mips64||mipsel||powerpc)
+  DEPENDS:= @!(powerpc)
 endef
 
 define Package/gperftools-runtime
@@ -34,7 +34,7 @@ define Package/gperftools-runtime
   CATEGORY:=Libraries
   TITLE:=Gperftools Runtime
   URL:=https://github.com/gperftools/gperftools
-  DEPENDS:= +libunwind +libstdcpp @!(mips||mips64||mipsel||powerpc)
+  DEPENDS:=+PACKAGE_libunwind:libunwind +libstdcpp @!(powerpc)
 endef
 
 define Package/gperftools-headers/description
@@ -49,12 +49,14 @@ endef
 
 CONFIGURE_ARGS += \
 	--enable-frame-pointers \
-	--enable-libunwind \
+	$(if $(CONFIG_PACKAGE_libunwind),--enable-libunwind,--disable-libunwind) \
 	--disable-deprecated-pprof
 
 define Build/InstallDev
 	$(INSTALL_DIR) $(1)/usr/lib
 	$(CP) $(PKG_INSTALL_DIR)/usr/lib/libtcmalloc.so* $(1)/usr/lib/
+	$(INSTALL_DIR) $(1)/usr/include/gperftools
+	$(CP) $(PKG_INSTALL_DIR)/usr/include/gperftools/*.h $(1)/usr/include/gperftools/
 endef
 
 define Package/gperftools-headers/install
