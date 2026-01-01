@@ -11,7 +11,7 @@ Date:   Sun Jul 5 10:42:52 2020 +0800
 
 --- a/getifaddr.c
 +++ b/getifaddr.c
-@@ -25,6 +25,7 @@
+@@ -26,6 +26,7 @@
  #if defined(USE_GETIFADDRS) || defined(ENABLE_IPV6) || defined(ENABLE_PCP)
  #include <ifaddrs.h>
  #endif
@@ -19,7 +19,7 @@ Date:   Sun Jul 5 10:42:52 2020 +0800
  
  int
  getifaddr(const char * ifname, char * buf, int len,
-@@ -313,6 +314,11 @@ addr_is_reserved(struct in_addr * addr)
+@@ -315,6 +316,11 @@ addr_is_reserved(struct in_addr * addr)
  	uint32_t address = ntohl(addr->s_addr);
  	size_t i;
  
@@ -33,9 +33,9 @@ Date:   Sun Jul 5 10:42:52 2020 +0800
  			return 1;
 --- a/miniupnpd.c
 +++ b/miniupnpd.c
-@@ -1252,6 +1252,10 @@ init(int argc, char * * argv, struct runtime_vars * v)
- 			case UPNPEXT_IP:
- 				use_ext_ip_addr = ary_options[i].value;
+@@ -1345,6 +1345,10 @@ init(int argc, char * * argv, struct run
+ 				if(strcmp(ary_options[i].value, "yes") == 0)
+ 					SETFLAG(ALLOWPRIVATEIPV4MASK);
  				break;
 +			case UPNPEXT_IP_RESERVED_IGNORE:
 +				if(strcmp(ary_options[i].value, "yes") == 0)
@@ -46,15 +46,15 @@ Date:   Sun Jul 5 10:42:52 2020 +0800
  					SETFLAG(PERFORMSTUNMASK);
 --- a/miniupnpd.conf
 +++ b/miniupnpd.conf
-@@ -11,6 +11,8 @@
+@@ -17,6 +17,8 @@
  # Setting ext_ip is also useful in double NAT setup, you can declare here
  # the public IP address.
  #ext_ip=
 +#ignore even if ext_ip is reserved: default is no
 +#ext_ip_reserved_ignore=yes
  
- # WAN interface must have public IP address. Otherwise it is behind NAT
- # and port forwarding is impossible. In some cases WAN interface can be
+ # Allow private IP address on external interface. When set to yes, program
+ # won't just disable port forwarding when external address is private IP.
 --- a/options.c
 +++ b/options.c
 @@ -35,6 +35,7 @@ static const struct {
@@ -62,9 +62,9 @@ Date:   Sun Jul 5 10:42:52 2020 +0800
  #endif
  	{ UPNPEXT_IP,	"ext_ip" },
 +	{ UPNPEXT_IP_RESERVED_IGNORE, "ext_ip_reserved_ignore" },
+ 	{ UPNPEXT_ALLOW_PRIVATE_IPV4, "ext_allow_private_ipv4" },
  	{ UPNPEXT_PERFORM_STUN, "ext_perform_stun" },
  	{ UPNPEXT_STUN_HOST, "ext_stun_host" },
- 	{ UPNPEXT_STUN_PORT, "ext_stun_port" },
 --- a/options.h
 +++ b/options.h
 @@ -21,6 +21,7 @@ enum upnpconfigoptions {
@@ -72,14 +72,14 @@ Date:   Sun Jul 5 10:42:52 2020 +0800
  #endif
  	UPNPEXT_IP,				/* ext_ip */
 +	UPNPEXT_IP_RESERVED_IGNORE, /* ignore if ext_ip is reserved */
+ 	UPNPEXT_ALLOW_PRIVATE_IPV4,	/* ext_allow_private_ipv4 */
  	UPNPEXT_PERFORM_STUN,		/* ext_perform_stun */
  	UPNPEXT_STUN_HOST,		/* ext_stun_host */
- 	UPNPEXT_STUN_PORT,		/* ext_stun_port */
 --- a/testgetifaddr.c
 +++ b/testgetifaddr.c
-@@ -13,6 +13,8 @@
- #include "config.h"
+@@ -14,6 +14,8 @@
  #include "getifaddr.h"
+ #include "getconnstatus.h"
  
 +int runtime_flags = 0;
 +
@@ -88,9 +88,9 @@ Date:   Sun Jul 5 10:42:52 2020 +0800
  #define LOG_PERROR 0
 --- a/testportinuse.c
 +++ b/testportinuse.c
-@@ -14,6 +14,8 @@
- #include "config.h"
- #include "portinuse.h"
+@@ -18,6 +18,8 @@
+ struct lan_addr_list lan_addrs;
+ time_t startup_time = 0;
  
 +int runtime_flags = 0;
 +
@@ -99,9 +99,9 @@ Date:   Sun Jul 5 10:42:52 2020 +0800
  #ifndef CHECK_PORTINUSE
 --- a/upnpglobalvars.h
 +++ b/upnpglobalvars.h
-@@ -87,6 +87,8 @@ extern int runtime_flags;
- 
- #define PERFORMSTUNMASK    0x1000
+@@ -90,6 +90,8 @@ extern int runtime_flags;
+ #define ALLOWPRIVATEIPV4MASK 0x2000
+ #define ALLOWFILTEREDSTUNMASK 0x4000
  
 +#define EXTIPRESERVEDIGNOREMASK 0x2000
 +
