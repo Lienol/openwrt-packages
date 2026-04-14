@@ -7,4 +7,3 @@ config ddns "global"
 #	option ddns_logdir "/var/log/ddns"
 	option ddns_loglines "250"
 	option upd_privateip "1"
-
