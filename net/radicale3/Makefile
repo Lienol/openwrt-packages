@@ -4,7 +4,7 @@
 include $(TOPDIR)/rules.mk
 
 PKG_NAME:=radicale3
-PKG_VERSION:=3.7.1
+PKG_VERSION:=3.7.6
 PKG_RELEASE:=1
 
 PKG_LICENSE:=GPL-3.0-or-later
@@ -13,7 +13,7 @@ PKG_CPE_ID:=cpe:/a:radicale:radicale
 
 PYPI_NAME:=Radicale
 PYPI_SOURCE_NAME:=radicale
-PKG_HASH:=cabb87ad9f0b6aaa724f0621810c0e0c0421ef04ef2617e988d9da63859cd8ad
+PKG_HASH:=366e8337588267e9b7af189f3ac527c5f9a8d7dd6d2e3e5796b49933bc72609c
 
 PKG_MAINTAINER:=Daniel F. Dickinson <dfdpublic@wildtechgarden.ca>
 
@@ -29,8 +29,7 @@ define Package/radicale3
   TITLE:=Radicale 3.x CalDAV/CardDAV server
   USERID:=radicale3=226:radicale3=226
   DEPENDS:=+python3 +python3-dateutil +python3-vobject +python3-setuptools \
-    +python3-defusedxml +python3-libpass +python3-requests +python3-pika \
-    +python3-packaging
+    +python3-defusedxml +python3-libpass +python3-requests +python3-pika
   PROVIDES:=radicale radicale2
 endef
 
@@ -41,7 +40,7 @@ define Package/radicale3/description
   pre-configured to work out-of-the-box.
   The Radicale Project runs on most of the UNIX-like platforms
   (Linux, BSD, MacOS X) and Windows. It is known to work with Evolution,
-  Lightning, iPhone and Android clients. It is free and open-source software,
+  Thunderbird, iOS, and Android clients. It is free and open-source software,
   released under GPL version 3.
 
   This package contains the python files.
