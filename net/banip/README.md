@@ -25,7 +25,7 @@ IP address blocking is commonly used to protect against brute force attacks, pre
 ## Quick Start
 For a typical setup these few steps are enough to get banIP up and running — see the sections below for details:
 1. Install the LuCI companion package: `apk update && apk add luci-app-banip` (this pulls in the `banip` backend as a dependency).
-2. Open LuCI under `Services → banIP`, tick `Enabled` and (recommended) set a `Startup Trigger Interface` to your WAN interface (avoid IPv6/wan6).
+2. Open LuCI under `Services → banIP`, tick `Enabled` and (recommended) set a `Startup Trigger Interface` to your WAN interface(s).
 3. Activate a small, sensible feed selection to start with, e.g. `cinsscore`, `debl`, `turris` and `doh` in their default chains (≈20K IPs).
 4. Start and verify the service:
 
@@ -147,7 +147,7 @@ For a typical setup these few steps are enough to get banIP up and running — s
 * Install the LuCI companion package `luci-app-banip` which also installs the main banIP package as a dependency
 * Enable the banIP system service (System -> Startup) and enable banIP itself (banIP -> General Settings)
 * It's strongly recommended to use the LuCI frontend to easily configure all aspects of banIP, the application is located in LuCI under the `Services` menu
-* It's also recommended to configure a `Startup Trigger Interface` to depend on your WAN ifup events during boot or restart of your router. Avoid IPv6 (wan6) interfaces here, as IPv6/netifd is chatty and would trigger frequent unnecessary banIP restarts
+* It's also recommended to configure a `Startup Trigger Interface` to depend on your WAN interface events during boot or restart of your router. Listing IPv6 interfaces (wan6) is fine as well: an interface event that only changed the uplink addresses refreshes the auto-allowed uplink entries in place, without a full banIP restart. This keeps the allowlist in sync with a dynamic IPv6 prefix
 * To be able to use banIP in a meaningful way, you must activate the service and possibly also activate a few blocklist feeds
 * If you're using a complex network setup, e.g. special tunnel interfaces, then untick the `Auto Detection` option under the `General Settings` tab and set the required options manually
 * Start the service with `/etc/init.d/banip start` and check everything is working by running `/etc/init.d/banip status`, also check the `Processing Log` tab
@@ -220,7 +220,7 @@ The `report` sub-command accepts an output mode: `text` (default, human-readable
 | ban_dev                 | list   | - / autodetect                | wan device(s), e.g. `eth2`                                                                                        |
 | ban_vlanallow           | list   | -                             | always allow certain VLAN forwards, e.g. br-lan.20                                                                |
 | ban_vlanblock           | list   | -                             | always block certain VLAN forwards, e.g. br-lan.10                                                                |
-| ban_trigger             | list   | -                             | logical reload trigger interface(s), e.g. `wan` (avoid IPv6 interfaces)                                           |
+| ban_trigger             | list   | -                             | logical reload trigger interface(s), e.g. `wan` and `wan6`                                                        |
 | ban_triggerdelay        | option | 20                            | trigger timeout during interface reload and boot                                                                  |
 | ban_deduplicate         | option | 1                             | deduplicate IP addresses across all active Sets (see optional feed flag `dup` below)                              |
 | ban_splitsize           | option | 0                             | split the processing/loading of Sets in chunks of n lines/members (saves RAM)                                     |
@@ -228,7 +228,7 @@ The `report` sub-command accepts an output mode: `text` (default, human-readable
 | ban_nftloglevel         | option | warn                          | nft loglevel, values: emerg, alert, crit, err, warn, notice, info, debug                                          |
 | ban_nftpriority         | option | -100                          | nft priority for the banIP table (the prerouting table is fixed to priority -150)                                 |
 | ban_nftpolicy           | option | memory                        | nft policy for banIP-related Sets, values: memory, performance                                                    |
-| ban_nftexpiry           | option | -                             | expiry time (ms|s|m|h|d|w) for auto added blocklist members (also controls the monitor cache refresh interval)    |
+| ban_nftexpiry           | option | -                             | expiry time (ms|s|m|h|d) for auto added blocklist members (also controls the monitor cache refresh interval)      |
 | ban_nftretry            | option | 3                             | number of Set load attempts in case of an error                                                                   |
 | ban_nftcount            | option | 0                             | enable nft counter for every Set element                                                                          |
 | ban_bcp38               | option | 0                             | block packets with spoofed source IP addresses in all supported chains                                            |
@@ -306,17 +306,17 @@ The `report` sub-command accepts an output mode: `text` (default, human-readable
 ~# /etc/init.d/banip status
 ::: banIP runtime information
   + status            : active (nft: ✔, monitor: ✔)
-  + frontend_ver      : 1.8.9-r1
-  + backend_ver       : 1.8.9-r1
-  + element_count     : 138 148 (chains: 7, sets: 13, rules: 50)
-  + active_feeds      : allowlist.v4MAC, allowlist.v6MAC, allowlist.v4, allowlist.v6, dns.v4, blocklist.v4MAC, blocklist.v6MAC, doh.v6, blocklist.v4, doh.v4, blocklist.v6, dns.v6, hagezi.v4
-  + active_devices    : wan: pppoe-wan / wan-if: wan, wan_6 / vlan-allow: - / vlan-block: -
-  + active_uplink     : 5.73.162.23, 2a13:4800:204:319e:b26d:238b:d7fe:8213
-  + nft_info          : ver: 1.1.6-r1, priority: -100, policy: performance, loglevel: warn, expiry: 2h, limit (icmp/syn/udp): 25/10/100
+  + frontend_ver      : 1.9.0-r1
+  + backend_ver       : 1.9.0-r1
+  + element_count     : 111 582 (chains: 7, sets: 21, rules: 50)
+  + active_feeds      : allowlist.v4MAC, allowlist.v6MAC, allowlist.v4, allowlist.v6, cinsscore.v4, debl.v4, country.v6, debl.v6, doh.v4, doh.v6, spamhaus.v4, ipthreat.v4, country.v4, spamhaus.v6, threat.v4, turris.v4, turris.v6, blocklist.v4MAC, blocklist.v6MAC, blocklist.v4, blocklist.v6
+  + active_devices    : trigger: wan / wan: pppoe-wan / wan-if: wan, wan_6 / vlan-allow: - / vlan-block: -
+  + active_uplink     : 46.167.33.169, 2a04:5700:304:ea66:e1fa:9a7f:ff78:ec41
+  + nft_info          : ver: 1.1.6-r4, priority: -100, policy: performance, loglevel: warn, expiry: 2h, limit (icmp/syn/udp): 25/10/100, loglimit (rate/burst): 10/5
   + run_info          : base: /mnt/data/banIP, backup: /mnt/data/banIP/backup, report: /mnt/data/banIP/report, error: /mnt/data/banIP/error
-  + run_flags         : auto: ✔, proto (4/6): ✔/✔, bcp38: ✔, log (pre/in/out): ✘/✘/✔, count: ✔, dedup: ✔, split: ✘, custom feed: ✘, allowed only: ✘
-  + last_run          : mode: restart, 2026-01-12 06:16:19, duration: 0m 36s, memory: 1446.84 MB available
-  + system_info       : cores: 4, log: logread, fetch: curl, Bananapi BPI-R3, mediatek/filogic, OpenWrt SNAPSHOT (r32542-bf46d119a2)
+  + run_flags         : auto: ✔, proto (4/6): ✔/✔, bcp38: ✔, log (pre/in/out): ✘/✘/✘, count: ✔, dedup: ✔, split: ✘, custom feed: ✘, allowed only: ✘, debug: ✔
+  + last_run          : mode: restart, date / time: 2026-09-19 15:27:29, duration: 0m 28s, memory: 1122.99 MB available
+  + system_info       : cores: 4, log: logread, fetch: curl, Bananapi BPI-R3, mediatek/filogic, OpenWrt SNAPSHOT (r36370-5369699684)
 ```
 
 **banIP search information**  
@@ -454,6 +454,7 @@ You find the `Log Terms` option in LuCI under the `Log Settings` tab. Feel free 
 banIP supports local allow- and block-lists, MAC/IPv4/IPv6 addresses (incl. ranges in CIDR notation) or domain names. These files are located in /etc/banip/banip.allowlist and /etc/banip/banip.blocklist.
 Unsuccessful login attempts or suspicious requests will be tracked and added to the local blocklist (see the `ban_autoblocklist` option). The blocklist behaviour can be further tweaked with the `ban_nftexpiry` option.
 Depending on the options `ban_autoallowlist` and `ban_autoallowuplink` the uplink subnet or the uplink IP will be added automatically to local allowlist.
+Entries in CIDR notation always refer to the whole network - set host bits are masked by nftables, e.g. `192.168.1.5/24` ends up as `192.168.1.0/24` in the Set and `2001:db8::e65f:1:2:3/64` as `2001:db8::/64`. To allow or block a single host omit the prefix length or use /32 resp. /128.
 Furthermore, you can reference external Allowlist URLs with additional IPv4 and IPv6 feeds (see `ban_allowurl`).
 Both local lists also accept domain names as input to allow IP filtering based on these names. The corresponding IPs (IPv4 & IPv6) will be extracted and added to the Sets.
 
@@ -535,7 +536,7 @@ To make this work, banIP uses the following external components:
 * [Leaflet](https://leafletjs.com/) is a lightweight open-source JavaScript library for interactive maps
 * The free and quite fast [IP Geolocation API](https://ip-api.com/) to resolve the required IP/geolocation information
 
-The basemap is no longer pulled from a tile service. CARTO started to require an API key for the raster basemaps at basemaps.cartocdn.com and watermarks every unauthenticated tile request, and a key is bound to a single customer, so it cannot be shipped with a package that lands on every installation. banIP therefore draws the basemap from country outlines that come with `luci-app-banip`: [Natural Earth](https://www.naturalearthdata.com) 1:110m, public domain, stripped of all attributes and simplified to 36 kB. The map page issues no request to a third party, works without a WAN connection and leaks no part of the admin session to a CDN. The outlines are enough to locate an IP, so the map does not zoom in beyond level 6 and labels the continents rather than the countries.
+The basemap is no longer pulled from a tile service. CARTO started to require an API key for the raster basemaps at basemaps.cartocdn.com and watermarks every unauthenticated tile request, and a key is bound to a single customer, so it cannot be shipped with a package that lands on every installation. banIP therefore draws the basemap from country outlines that come with `luci-app-banip`: [Natural Earth](https://www.naturalearthdata.com) 1:110m, public domain, stripped of all attributes and simplified to 36 kB. No tile service is contacted anymore, but the map page still loads the Leaflet library from unpkg.com (integrity-checked via SRI and requested without cookies), so it needs a WAN connection. The outlines are enough to locate an IP, so the map does not zoom in beyond level 6 and labels the continents rather than the countries.
 
 **Optional: a higher detail basemap**
 
@@ -549,7 +550,7 @@ scp world-50m.json root@openwrt:/www/luci-static/resources/view/banip/
 
 The result is roughly 105 kB, about three times the shipped file. Please note: this file is not part of any package, so it is removed on sysupgrade unless you add its path to `/etc/sysupgrade.conf`, and it stays behind when `luci-app-banip` is uninstalled.
 
-Please note: the free ip-api.com batch endpoint is rate limited to 15 requests per minute per source IP. Requests beyond that limit are throttled with HTTP 429, and constantly exceeding the limit gets the IP banned for an hour — in both cases the map stays empty and banIP logs an info message. To stay below the limit banIP collects the top listed elements of all Sets, deduplicates them and resolves them in as few batch requests as possible (100 IPs each, the maximum the endpoint accepts). A setup with up to ~1500 mapped elements therefore needs no more than 15 requests per report run. If you run a large number of Sets and regenerate the report frequently, lower `ban_map` to `0` or reduce the number of active feeds.
+Please note: the free ip-api.com batch endpoint is rate limited to 15 requests per minute per source IP. Requests beyond that limit are throttled with HTTP 429, and constantly exceeding the limit gets the IP banned for an hour — in both cases the affected part of the map stays empty and banIP logs an info message. To stay below the limit banIP collects the top listed elements of all Sets, deduplicates them and resolves them in batch requests of 100 IPs each (the maximum the endpoint accepts), capped at 15 requests per report run. Elements beyond ~1500 are left out of the map and banIP logs an info message. A report regenerated within 60 seconds of the last geo lookup reuses its map data instead of querying the service again. Please note that other clients behind the same public IP count against the same limit.
 
 **CGI interface to receive remote logging events**  
 banIP ships a basic cgi interface in `/www/cgi-bin/banip` to receive remote logging events (disabled by default). The cgi interface evaluates logging events via GET or POST request (see examples below). To enable the cgi interface set the following options:
@@ -569,7 +570,7 @@ Please note: for security reasons use this cgi interface only internally and onl
 By default banIP uses the following pre-configured download options:
 
 ```
-    * curl: --connect-timeout 20 --retry-delay 10 --retry 4 --retry-max-time 80 --retry-all-errors --fail --silent --show-error --location -o
+    * curl: --connect-timeout 20 --retry-delay 10 --retry 4 --retry-max-time 80 --retry-all-errors --fail --silent --globoff --show-error --location -o
     * wget: --no-cache --no-cookies --timeout=20 --waitretry=10 --tries=5 --retry-connrefused -O
     * uclient-fetch: --timeout=20 -O
 ```
@@ -631,19 +632,35 @@ A feed is a single JSON object, keyed by a unique feed name (no spaces, no speci
 The object supports the following fields:
 
 | Field   | Required | Description                                                                                                              |
-| :------ | :------: | :--------------------------------------------------------------------------------------------------------------------- |
+| :------ | :------: | :----------------------------------------------------------------------------------------------------------------------- |
 | url_4   | yes\*    | download URL of the IPv4 list. \*at least one of `url_4`/`url_6` must be present                                         |
-| url_6   | yes\*    | download URL of the IPv6 list. May point to the **same** URL as `url_4` if the source mixes IPv4 and IPv6 in one file   |
-| rule    | yes      | the parsing ruleset, max. 4 space separated parameters (see below)                                                      |
-| chain   | yes      | the default chain/direction: `in`, `out` or `inout` (see below)                                                         |
-| descr   | yes      | a short human-readable description shown in LuCI and the feed table                                                     |
-| flag    | no       | optional, space separated list of extra options: archive format and/or protocol/port limitations (see below)           |
+| url_6   | yes\*    | download URL of the IPv6 list. May point to the **same** URL as `url_4` if the source mixes IPv4 and IPv6 in one file    |
+| rule    | yes      | the parsing ruleset, max. 4 space separated parameters (see below)                                                       |
+| chain   | yes      | the default chain/direction: `in`, `out` or `inout` (see below)                                                          |
+| descr   | yes      | a short human-readable description shown in LuCI and the feed table                                                      |
+| flag    | no       | optional, space separated list of extra options: archive format and/or protocol/port limitations (see below)             |
 
 **The `url_4` / `url_6` fields**  
 Each address family is fetched and processed independently. Three cases:
 * IPv4-only source: set `url_4` only, omit `url_6`
 * separate IPv4 and IPv6 files: set both to their respective URLs (e.g. `doh`, `spamhaus`)
 * a single dual-stack file that mixes v4 and v6 entries: point both `url_4` and `url_6` at that same URL. banIP fetches it only once and process it for each family and the per-family regex extracts the matching addresses; the non-matching lines are simply ignored. (e.g. `threatview`, which ships v4 and v6 in one file).
+
+The `country` and `asn` feeds are special: banIP fetches one file per selected country code / ASN, so their URLs are templates. The placeholder is replaced by the configured value as-is, so country codes have to be lowercase, just like in banip.countries. The placeholder `{country}` is replaced by the lowercase ISO country code, `{asn}` by the bare AS number, e.g. `https://www.ipdeny.com/ipblocks/data/aggregated/{country}-aggregated.zone` or `https://asn.ipinfo.app/api/text/list/AS{asn}`. A URL without placeholder is treated as a base path and gets the legacy suffix appended (`<cc>-aggregated.zone` resp. `AS<asn>`), so older custom feed files keep working. The placeholder can sit anywhere in the URL, which allows to switch the country source to a differently structured one. Example for a GeoLite2-based alternative, which ships IPv4 and IPv6 in one file per country:
+
+```json
+	"country":{
+		"url_4": "https://raw.githubusercontent.com/Loyalsoldier/geoip/release/text/{country}.txt",
+		"url_6": "https://raw.githubusercontent.com/Loyalsoldier/geoip/release/text/{country}.txt",
+		"rule": "feed 1",
+		"chain": "in",
+		"descr": "country blocks (GeoLite2)"
+	},
+```
+
+Pointing `url_4` and `url_6` at the same file is the dual-stack case described above, so each country file is downloaded only once and processed for both address families. This source includes GeoLite2 data created by MaxMind, available from https://www.maxmind.com - its use is subject to the MaxMind GeoLite End User License Agreement.
+
+Keep in mind that alternative sources come with their own license terms, which you have to check yourself, and that they differ in semantics (geolocation vs. RIR allocation), granularity (set sizes and memory footprint may grow considerably) and code coverage (a missing country file only logs a download failure for that code).
 
 **The `rule` field**  
 The rule consists of max. 4 individual, space separated parameters:
