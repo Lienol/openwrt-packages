@@ -8,12 +8,13 @@
 include $(TOPDIR)/rules.mk
 
 PKG_NAME:=freeradius3
-PKG_VERSION:=3.2.5
-PKG_RELEASE:=3
+PKG_VERSION:=3.2.8
+PKG_VERSION_UNDERSCORE:=$(subst .,_,${PKG_VERSION})
+PKG_RELEASE:=1
 
 PKG_SOURCE:=freeradius-server-$(PKG_VERSION).tar.gz
-PKG_SOURCE_URL:=https://www.freeradius.org/ftp/pub/freeradius/
-PKG_HASH:=1e75f5fc1961d9854d1cb3c6921612fbe2b9edb8ee508a5a7cbd69f1e7607115
+PKG_SOURCE_URL:=https://github.com/FreeRADIUS/freeradius-server/releases/download/release_$(PKG_VERSION_UNDERSCORE)/
+PKG_HASH:=3846498103d3faf182abd968a440128cb0c5589330bdcdd58c466ef15d9f9fdf
 
 PKG_MAINTAINER:=
 PKG_LICENSE:=GPL-2.0
@@ -751,6 +752,7 @@ CONFIGURE_ARGS+= \
 	--without-rlm_couchbase \
 	--without-rlm_eap_ikev2 \
 	--without-rlm_eap_tnc \
+	--without-rlm_kafka \
 	--without-rlm_perl \
 	--without-rlm_python \
 	--without-rlm_sql_db2 \
