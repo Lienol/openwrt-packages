@@ -453,6 +453,7 @@ You find the `Log Terms` option in LuCI under the `Log Settings` tab. Feel free 
 **Allow-/Blocklist handling**  
 banIP supports local allow- and block-lists, MAC/IPv4/IPv6 addresses (incl. ranges in CIDR notation) or domain names. These files are located in /etc/banip/banip.allowlist and /etc/banip/banip.blocklist.
 Unsuccessful login attempts or suspicious requests will be tracked and added to the local blocklist (see the `ban_autoblocklist` option). The blocklist behaviour can be further tweaked with the `ban_nftexpiry` option.
+Elements added by the log monitor, including the RDAP ranges of an offending address, expire after `ban_nftexpiry`, but every new hit within an existing range resets its timeout. As the Sets use `auto-merge`, overlapping or adjacent ranges are also combined into a single larger element. A network under continuous attack can therefore stay in the blocklist far beyond the configured expiry and grow over time - this is intended behaviour, not a stale entry.
 Depending on the options `ban_autoallowlist` and `ban_autoallowuplink` the uplink subnet or the uplink IP will be added automatically to local allowlist.
 Entries in CIDR notation always refer to the whole network - set host bits are masked by nftables, e.g. `192.168.1.5/24` ends up as `192.168.1.0/24` in the Set and `2001:db8::e65f:1:2:3/64` as `2001:db8::/64`. To allow or block a single host omit the prefix length or use /32 resp. /128.
 Furthermore, you can reference external Allowlist URLs with additional IPv4 and IPv6 feeds (see `ban_allowurl`).
@@ -570,12 +571,12 @@ Please note: for security reasons use this cgi interface only internally and onl
 By default banIP uses the following pre-configured download options:
 
 ```
-    * curl: --connect-timeout 20 --retry-delay 10 --retry 4 --retry-max-time 80 --retry-all-errors --fail --silent --globoff --show-error --location -o
+    * curl: --connect-timeout 20 --speed-time 20 --retry-delay 10 --retry 4 --retry-all-errors --fail --silent --globoff --show-error --location -o
     * wget: --no-cache --no-cookies --timeout=20 --waitretry=10 --tries=5 --retry-connrefused -O
     * uclient-fetch: --timeout=20 -O
 ```
 
-The retry-related values shown above are derived from `ban_fetchretry` (default `5`): for curl `--retry` is `ban_fetchretry - 1` and `--retry-max-time` is `(ban_fetchretry - 1) * 20`, for wget `--tries` equals `ban_fetchretry`. To override the defaults set `ban_fetchretry`, `ban_fetchinsecure` or globally `ban_fetchparm` to your needs.
+The retry-related values shown above are derived from `ban_fetchretry` (default `5`): for curl `--retry` is `ban_fetchretry - 1`, for wget `--tries` equals `ban_fetchretry`. To override the defaults set `ban_fetchretry`, `ban_fetchinsecure` or globally `ban_fetchparm` to your needs.
 
 **Configure E-Mail notifications via `msmtp`**  
 To use the email notification you must install and configure the package `msmtp`.

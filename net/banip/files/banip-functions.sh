@@ -261,9 +261,8 @@ f_trim() {
 f_rmpid() {
 	local ppid pid pids_next pids_all childs newchilds
 
-	# kill all descendant processes of the pid in pidfile
-	#
 	ppid="$("${ban_catcmd}" "${ban_pidfile}" 2>>"${ban_errorlog}")"
+	: >"${ban_pidfile}"
 	if [ -n "${ppid}" ]; then
 		pids_next="$("${ban_pgrepcmd}" -P "${ppid}" 2>>"${ban_errorlog}")"
 		pids_all=""
@@ -288,7 +287,6 @@ f_rmpid() {
 			kill -INT "${pid}" >/dev/null 2>&1
 		done
 	fi
-	: >"${ban_pidfile}"
 }
 
 # write log messages
@@ -610,23 +608,23 @@ f_getdl() {
 	case "${ban_fetchcmd##*/}" in
 	"curl")
 		[ "${ban_fetchinsecure}" = "1" ] && insecure="--insecure"
-		ban_fetchparm="${ban_fetchparm:-"${insecure} --connect-timeout 20 --retry-delay 10 --retry $((ban_fetchretry - 1)) --retry-max-time $(((ban_fetchretry - 1) * 20)) --retry-all-errors --fail --silent --globoff --show-error --location -o"}"
-		ban_rdapparm="--connect-timeout 5 --silent --globoff --location -o"
-		ban_etagparm="--connect-timeout 5 --silent --globoff --location --head"
-		ban_geoparm="--connect-timeout 5 --silent --globoff --location --data"
+		ban_fetchparm="${ban_fetchparm:-"${insecure} --connect-timeout 20 --speed-time 20 --retry-delay 10 --retry $((ban_fetchretry - 1)) --retry-all-errors --fail --silent --globoff --show-error --location -o"}"
+		ban_rdapparm="${insecure} --connect-timeout 5 --max-time 20 --fail --silent --globoff --show-error --location -o"
+		ban_etagparm="${insecure} --connect-timeout 5 --max-time 10 --fail --silent --globoff --location --head"
+		ban_geoparm="${insecure} --connect-timeout 5 --max-time 10 --fail --silent --globoff --show-error --location --data"
 		;;
 	"wget")
 		[ "${ban_fetchinsecure}" = "1" ] && insecure="--no-check-certificate"
 		ban_fetchparm="${ban_fetchparm:-"${insecure} --no-cache --no-cookies --timeout=20 --waitretry=10 --tries=${ban_fetchretry} --retry-connrefused -O"}"
-		ban_rdapparm="--timeout=5 -O"
-		ban_etagparm="--timeout=5 --spider --server-response"
-		ban_geoparm="--timeout=5 --quiet -O- --post-data"
+		ban_rdapparm="${insecure} --tries=1 --timeout=5 --no-verbose -O"
+		ban_etagparm="${insecure} --tries=1 --timeout=5 --spider --server-response"
+		ban_geoparm="${insecure} --tries=1 --timeout=5 --quiet -O- --post-data"
 		;;
 	"uclient-fetch")
 		[ "${ban_fetchinsecure}" = "1" ] && insecure="--no-check-certificate"
 		ban_fetchparm="${ban_fetchparm:-"${insecure} --timeout=20 -O"}"
-		ban_rdapparm="--timeout=5 -O"
-		ban_geoparm="--timeout=5 --quiet -O- --post-data"
+		ban_rdapparm="${insecure} --timeout=5 -O"
+		ban_geoparm="${insecure} --timeout=5 --quiet -O- --post-data"
 		;;
 	esac
 
@@ -2848,10 +2846,19 @@ f_mail() {
 	f_log "debug" "f_mail    ::: notification: ${ban_mailnotification}, template: ${ban_mailtemplate}, profile: ${ban_mailprofile}, receiver: ${ban_mailreceiver}, rc: ${?}"
 }
 
+# handle unexpected service exits
+#
+f_exit() {
+	trap - EXIT
+	if [ "$("${ban_catcmd}" "${ban_pidfile}" 2>/dev/null)" = "${$}" ]; then
+		f_log "err" "banIP service terminated unexpectedly"
+	fi
+}
+
 # log monitor
 #
 f_monitor() {
-	local nft_expiry ip proto idx base cidr rdap_log rdap_rc rdap_idx rdap_info log_type allow_v4 allow_v6 block_v4 block_v6
+	local nft_expiry ip proto rdap_log rdap_rc rdap_start rdap_end rdap_range rdap_regex rdap_country rdap_nic rdap_info log_type allow_v4 allow_v6 block_v4 block_v6
 	local file cache_ts date_stamp time_now time_elapsed cache_interval rdap_interval rdap_tsfile rdap_lock rdap_jobs
 	local rdap_ts block_cache block_cache_limit block_cache_cnt monitor_set
 
@@ -3131,34 +3138,50 @@ f_monitor() {
 								# process RDAP response if valid JSON with expected content, otherwise log error
 								#
 								if [ "${rdap_rc}" = "0" ] && [ -s "${ban_rdapfile}.${ip}" ]; then
-									[ "${proto}" = ".v4" ] && rdap_idx="$("${ban_jsoncmd}" -i "${ban_rdapfile}.${ip}" -qe '@.cidr0_cidrs[@.v4prefix].*' | "${ban_awkcmd}" '{ORS=" "; print}')"
-									[ "${proto}" = ".v6" ] && rdap_idx="$("${ban_jsoncmd}" -i "${ban_rdapfile}.${ip}" -qe '@.cidr0_cidrs[@.v6prefix].*' | "${ban_awkcmd}" '{ORS=" "; print}')"
-									rdap_info="$("${ban_jsoncmd}" -l1 -i "${ban_rdapfile}.${ip}" -qe '@.country' -qe '@.notices[@.title="Source"].description[1]' | "${ban_awkcmd}" 'BEGIN{RS="";FS="\n"}{c=($1!=""?$1:"-"); s=($2!=""?$2:"-"); printf "%s, %s", c, s}')"
-									[ -z "${rdap_info}" ] || [ "${rdap_info}" = "-, -" ] && rdap_info="$("${ban_jsoncmd}" -l1 -i "${ban_rdapfile}.${ip}" -qe '@.notices[0].links[0].value' | "${ban_awkcmd}" 'BEGIN{FS="[/.]"}{printf"%s, %s","n/a",toupper($4)}')"
+									rdap_start="$("${ban_jsoncmd}" -i "${ban_rdapfile}.${ip}" -qe '@.startAddress')"
+									rdap_end="$("${ban_jsoncmd}" -i "${ban_rdapfile}.${ip}" -qe '@.endAddress')"
+									rdap_country="$("${ban_jsoncmd}" -i "${ban_rdapfile}.${ip}" -qe '@.country')"
+									[ -z "${rdap_country}" ] && rdap_country="$("${ban_jsoncmd}" -l1 -i "${ban_rdapfile}.${ip}" -qe '@.entities[@.roles[*]="registrant"].vcardArray[1][@[0]="adr"][3][6]')"
+									case "${rdap_country}" in
+									[A-Z][A-Z]) ;;
+									*)
+										[ -z "${rdap_country}" ] && rdap_country="$("${ban_jsoncmd}" -l1 -i "${ban_rdapfile}.${ip}" -qe '@.entities[@.roles[*]="registrant"].vcardArray[1][@[0]="adr"][1].label')"
+										rdap_country="$("${ban_awkcmd}" -F'\t' -v n="${rdap_country}" 'BEGIN{c=split(n,a,"\n");n=tolower(a[c])}n!=""&&tolower($3)==n{printf "%s",toupper($1);exit}' "${ban_countryfile}" 2>/dev/null)"
+										;;
+									esac
+									rdap_nic="$("${ban_jsoncmd}" -i "${ban_rdapfile}.${ip}" -qe '@.port43')"
+									rdap_nic="${rdap_nic#whois.}"
+									rdap_info="${rdap_country:-"-"}, ${rdap_nic:-"-"}"
 
-									# if RDAP response contains (multiple) valid CIDR info,
-									# attempt to add entire range to blocklist set with same expiry as individual IP
+									# if RDAP response contains a valid address range (RFC 9083 startAddress/endAddress),
+									# add the entire range as a single interval element to blocklist set with same expiry as individual IP
 									#
-									base=""
-									for idx in ${rdap_idx}; do
-										if [ -z "${base}" ]; then
-											base="${idx}"
-											continue
-										else
-											case "${base}" in
-											"" | "::"* | "127."* | "0."* | "fe80:"*)
-												base=""
-												continue
-												;;
-											esac
-											[ -z "${base}" ] && continue
-											cidr="${base}/${idx}"
-											if "${ban_nftcmd}" add element inet banIP "blocklist${proto}" { ${cidr} ${nft_expiry} } >/dev/null 2>&1; then
-												f_log "info" "add IP range '${cidr}' (source: ${rdap_info:-"n/a"} ::: expiry: ${ban_nftexpiry:-"-"}) to blocklist${proto} set"
-											fi
-											base=""
+									rdap_range=""
+									rdap_regex=""
+									case "${rdap_start}-${rdap_end}" in
+									"-"* | "::"* | "127."* | "0."* | "fe80:"* | *[!0-9A-Fa-f.:-]*) ;;
+									*)
+										if [ "${proto}" = ".v4" ]; then
+											rdap_regex='^[0-9]{1,3}(\.[0-9]{1,3}){3}-[0-9]{1,3}(\.[0-9]{1,3}){3}$'
+										elif [ "${proto}" = ".v6" ]; then
+											rdap_regex='^[0-9A-Fa-f:]*:[0-9A-Fa-f:]*-[0-9A-Fa-f:]*:[0-9A-Fa-f:]*$'
 										fi
-									done
+										if [ -n "${rdap_regex}" ]; then
+											printf '%s' "${rdap_start}-${rdap_end}" | "${ban_grepcmd}" -qE "${rdap_regex}" && rdap_range="${rdap_start}-${rdap_end}"
+										fi
+										;;
+									esac
+									if [ -n "${rdap_range}" ]; then
+										if "${ban_nftcmd}" add element inet banIP "blocklist${proto}" { ${rdap_range} ${nft_expiry} } >/dev/null 2>&1; then
+											f_log "info" "add IP range '${rdap_range}' (source: ${rdap_info:-"n/a"} ::: expiry: ${ban_nftexpiry:-"-"}) to blocklist${proto} set"
+										else
+											f_log "info" "failed to add IP range '${rdap_range}' to blocklist${proto} set with rc '${?}'"
+										fi
+									else
+										rdap_start="${rdap_start%%[!0-9A-Fa-f.:]*}"
+										rdap_end="${rdap_end%%[!0-9A-Fa-f.:]*}"
+										f_log "info" "no valid rdap range (start: ${rdap_start:-"-"}/end: ${rdap_end:-"-"}) for IP '${ip}'"
+									fi
 								else
 									f_log "info" "rdap request failed (rc: ${rdap_rc:-"-"}/log: ${rdap_log:-"-"}) for IP '${ip}'"
 								fi
