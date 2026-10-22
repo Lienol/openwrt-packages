@@ -1,38 +1,51 @@
 include $(TOPDIR)/rules.mk
 
 PKG_NAME:=lua-eco
-PKG_VERSION:=3.14.0
-PKG_RELEASE:=1
+PKG_VERSION:=4.1.4
+PKG_RELEASE:=2
 
 PKG_SOURCE:=$(PKG_NAME)-$(PKG_VERSION).tar.gz
 PKG_SOURCE_URL=https://github.com/zhaojh329/lua-eco/releases/download/v$(PKG_VERSION)
-PKG_HASH:=b5e00132bbfe9ce981f5b925f575979bf923c9447d8f3ca8b8a84fc7a7b4411e
+PKG_HASH:=9f4348294c2d6461e6109ddb57a80bb67f24a1be77cb6cea492925948d6d9d0b
 
 PKG_MAINTAINER:=Jianhui Zhao <zhaojh329@gmail.com>
 PKG_LICENSE:=MIT
 PKG_LICENSE_FILES:=LICENSE
 
 PKG_CONFIG_DEPENDS:= \
-	LUA_ECO_OPENSSL \
-	LUA_ECO_WOLFSSL \
-	LUA_ECO_MBEDTLS
+	CONFIG_LUA_ECO_CRASH_BACKTRACE \
+	CONFIG_LUA_ECO_OPENSSL \
+	CONFIG_LUA_ECO_WOLFSSL \
+	CONFIG_LUA_ECO_MBEDTLS
 
 include $(INCLUDE_DIR)/package.mk
 include $(INCLUDE_DIR)/cmake.mk
 
 define Package/lua-eco
-  TITLE:=A Lua interpreter with a built-in libev event loop
+  TITLE:=A Lua interpreter with a built-in epoll based event loop
   SECTION:=lang
   CATEGORY:=Languages
   SUBMENU:=Lua
   URL:=https://github.com/zhaojh329/lua-eco
-  DEPENDS:=+libev +liblua5.4
+  DEPENDS:=+liblua5.4 +LUA_ECO_CRASH_BACKTRACE:libunwind
 endef
 
 define Package/lua-eco/description
-  Lua-eco is a Lua interpreter with a built-in event loop for scheduling
-  lightweight coroutines automatically, enabling efficient concurrency in
-  Lua. Build high-performance, scalable applications.
+  Lua-eco is a coroutine-first runtime environment for Lua 5.4.
+  At its internal is an **I/O-event-driven coroutine scheduler** (Linux `epoll` + timers): all I/O APIs
+  use **non-blocking file descriptors** under the hood while exposing a **synchronous** programming style
+  in Lua.
+endef
+
+define Package/lua-eco/config
+	config LUA_ECO_CRASH_BACKTRACE
+		bool "Enable fatal signal C backtrace diagnostics"
+		depends on !(USE_MUSL && powerpc)
+		default n
+		help
+		  Install fatal signal handlers that print a C backtrace using
+		  libunwind. Set ECO_CRASH_BACKTRACE_FILE at runtime to write
+		  diagnostics to a file instead of standard error.
 endef
 
 define Package/lua-eco/Module
@@ -44,6 +57,7 @@ define Package/lua-eco/Module
   DEPENDS:=+lua-eco $2
 endef
 
+Package/lua-eco-cli=$(call Package/lua-eco/Module,cli)
 Package/lua-eco-log=$(call Package/lua-eco/Module,log utils)
 Package/lua-eco-base64=$(call Package/lua-eco/Module,base64)
 Package/lua-eco-sha1=$(call Package/lua-eco/Module,sha1)
@@ -66,7 +80,7 @@ Package/lua-eco-nl80211=$(call Package/lua-eco/Module,nl80211,+lua-eco-netlink)
 Package/lua-eco-ssh=$(call Package/lua-eco/Module,ssh,+lua-eco-socket +libssh2)
 Package/lua-eco-packet=$(call Package/lua-eco/Module,packet,+lua-eco-nl80211)
 Package/lua-eco-uci=$(call Package/lua-eco/Module,uci,+libuci)
-Package/lua-eco-shared=$(call Package/lua-eco/Module,shared,+lua-eco-socket)
+Package/lua-eco-shared=$(call Package/lua-eco/Module,shared-memory dictionary)
 Package/lua-eco-net=$(call Package/lua-eco/Module,net,+lua-eco-packet +lua-eco-dns)
 
 define Package/lua-eco-ssl/config
@@ -86,6 +100,7 @@ define Package/lua-eco-ssl/config
 endef
 
 CMAKE_OPTIONS += \
+  -DECO_CRASH_BACKTRACE=O$(if $(CONFIG_LUA_ECO_CRASH_BACKTRACE),N,FF) \
   -DECO_UBUS_SUPPORT=O$(if $(CONFIG_PACKAGE_lua-eco-ubus),N,FF) \
   -DECO_SSL_SUPPORT=O$(if $(CONFIG_PACKAGE_lua-eco-ssl),N,FF)
 
@@ -99,135 +114,142 @@ ifneq ($(CONFIG_PACKAGE_lua-eco-ssl),)
   endif
 endif
 
+LUA_INSTALL_DIR:=/usr/lib/lua/5.4
+
 define Package/lua-eco/install
-	$(INSTALL_DIR) $(1)/usr/bin $(1)/usr/local/lib/lua/5.4/eco/core \
-		$(1)/usr/lib $(1)/usr/local/lib/lua/5.4/eco/encoding
+	$(INSTALL_DIR) $(1)/usr/bin $(1)$(LUA_INSTALL_DIR)/eco/internal \
+		$(1)$(LUA_INSTALL_DIR)/eco/encoding
 	$(INSTALL_BIN) $(PKG_BUILD_DIR)/eco $(1)/usr/bin
-	$(CP) $(PKG_BUILD_DIR)/libeco.so* $(1)/usr/lib
-	$(INSTALL_BIN) $(PKG_BUILD_DIR)/bufio.so $(1)/usr/local/lib/lua/5.4/eco
-	$(INSTALL_DATA) $(PKG_BUILD_DIR)/hex.lua $(1)/usr/local/lib/lua/5.4/eco/encoding
-	$(INSTALL_BIN) $(PKG_BUILD_DIR)/{time,bufio,sys,file}.so $(1)/usr/local/lib/lua/5.4/eco/core
-	$(INSTALL_DATA) $(PKG_BUILD_DIR)/{time,sys,file,sync,channel}.lua $(1)/usr/local/lib/lua/5.4/eco
+	$(INSTALL_DATA) $(PKG_BUILD_DIR)/hex.lua $(1)$(LUA_INSTALL_DIR)/eco/encoding
+	$(INSTALL_BIN) $(PKG_BUILD_DIR)/{time,sys,file,sync}.so $(1)$(LUA_INSTALL_DIR)/eco/internal
+	$(INSTALL_DATA) $(PKG_BUILD_DIR)/{time,sys,file,sync,channel}.lua $(1)$(LUA_INSTALL_DIR)/eco
+endef
+
+define Package/lua-eco-cli/install
+	$(INSTALL_DIR) $(1)$(LUA_INSTALL_DIR)/eco
+	$(INSTALL_DATA) $(PKG_BUILD_DIR)/cli.lua $(1)$(LUA_INSTALL_DIR)/eco
 endef
 
 define Package/lua-eco-log/install
-	$(INSTALL_DIR) $(1)/usr/local/lib/lua/5.4/eco
-	$(INSTALL_BIN) $(PKG_BUILD_DIR)/log.so $(1)/usr/local/lib/lua/5.4/eco
+	$(INSTALL_DIR) $(1)$(LUA_INSTALL_DIR)/eco
+	$(INSTALL_BIN) $(PKG_BUILD_DIR)/log.so $(1)$(LUA_INSTALL_DIR)/eco
 endef
 
 define Package/lua-eco-base64/install
-	$(INSTALL_DIR) $(1)/usr/local/lib/lua/5.4/eco/encoding
-	$(INSTALL_BIN) $(PKG_BUILD_DIR)/base64.so $(1)/usr/local/lib/lua/5.4/eco/encoding
+	$(INSTALL_DIR) $(1)$(LUA_INSTALL_DIR)/eco/encoding
+	$(INSTALL_BIN) $(PKG_BUILD_DIR)/base64.so $(1)$(LUA_INSTALL_DIR)/eco/encoding
 endef
 
 define Package/lua-eco-sha1/install
-	$(INSTALL_DIR) $(1)/usr/local/lib/lua/5.4/eco/hash
-	$(INSTALL_BIN) $(PKG_BUILD_DIR)/sha1.so $(1)/usr/local/lib/lua/5.4/eco/hash
+	$(INSTALL_DIR) $(1)$(LUA_INSTALL_DIR)/eco/hash
+	$(INSTALL_BIN) $(PKG_BUILD_DIR)/hash/sha1.so $(1)$(LUA_INSTALL_DIR)/eco/hash
 endef
 
 define Package/lua-eco-sha256/install
-	$(INSTALL_DIR) $(1)/usr/local/lib/lua/5.4/eco/hash
-	$(INSTALL_BIN) $(PKG_BUILD_DIR)/sha256.so $(1)/usr/local/lib/lua/5.4/eco/hash
+	$(INSTALL_DIR) $(1)$(LUA_INSTALL_DIR)/eco/hash
+	$(INSTALL_BIN) $(PKG_BUILD_DIR)/hash/sha256.so $(1)$(LUA_INSTALL_DIR)/eco/hash
 endef
 
 define Package/lua-eco-md5/install
-	$(INSTALL_DIR) $(1)/usr/local/lib/lua/5.4/eco/hash
-	$(INSTALL_BIN) $(PKG_BUILD_DIR)/md5.so $(1)/usr/local/lib/lua/5.4/eco/hash
+	$(INSTALL_DIR) $(1)$(LUA_INSTALL_DIR)/eco/hash
+	$(INSTALL_BIN) $(PKG_BUILD_DIR)/hash/md5.so $(1)$(LUA_INSTALL_DIR)/eco/hash
 endef
 
 define Package/lua-eco-hmac/install
-	$(INSTALL_DIR) $(1)/usr/local/lib/lua/5.4/eco/hash
-	$(INSTALL_BIN) $(PKG_BUILD_DIR)/hmac.lua $(1)/usr/local/lib/lua/5.4/eco/hash
+	$(INSTALL_DIR) $(1)$(LUA_INSTALL_DIR)/eco/hash
+	$(INSTALL_BIN) $(PKG_BUILD_DIR)/hash/hmac.lua $(1)$(LUA_INSTALL_DIR)/eco/hash
 endef
 
 define Package/lua-eco-socket/install
-	$(INSTALL_DIR) $(1)/usr/local/lib/lua/5.4/eco/core
-	$(INSTALL_DATA) $(PKG_BUILD_DIR)/socket.lua $(1)/usr/local/lib/lua/5.4/eco
-	$(INSTALL_BIN) $(PKG_BUILD_DIR)/socket.so $(1)/usr/local/lib/lua/5.4/eco/core
+	$(INSTALL_DIR) $(1)$(LUA_INSTALL_DIR)/eco/internal
+	$(INSTALL_DATA) $(PKG_BUILD_DIR)/socket.lua $(1)$(LUA_INSTALL_DIR)/eco
+	$(INSTALL_BIN) $(PKG_BUILD_DIR)/socket.so $(1)$(LUA_INSTALL_DIR)/eco/internal
 endef
 
 define Package/lua-eco-dns/install
-	$(INSTALL_DIR) $(1)/usr/local/lib/lua/5.4/eco
-	$(INSTALL_DATA) $(PKG_BUILD_DIR)/dns.lua $(1)/usr/local/lib/lua/5.4/eco
+	$(INSTALL_DIR) $(1)$(LUA_INSTALL_DIR)/eco/internal
+	$(INSTALL_DATA) $(PKG_BUILD_DIR)/dns.lua $(1)$(LUA_INSTALL_DIR)/eco
+	$(INSTALL_BIN) $(PKG_BUILD_DIR)/dns.so $(1)$(LUA_INSTALL_DIR)/eco/internal
 endef
 
 define Package/lua-eco-ssl/install
-	$(INSTALL_DIR) $(1)/usr/local/lib/lua/5.4/eco/core
-	$(INSTALL_DATA) $(PKG_BUILD_DIR)/ssl.lua $(1)/usr/local/lib/lua/5.4/eco
-	$(INSTALL_BIN) $(PKG_BUILD_DIR)/ssl.so $(1)/usr/local/lib/lua/5.4/eco/core
+	$(INSTALL_DIR) $(1)$(LUA_INSTALL_DIR)/eco/internal
+	$(INSTALL_DATA) $(PKG_BUILD_DIR)/ssl.lua $(1)$(LUA_INSTALL_DIR)/eco
+	$(INSTALL_BIN) $(PKG_BUILD_DIR)/ssl.so $(1)$(LUA_INSTALL_DIR)/eco/internal
 endef
 
 define Package/lua-eco-ubus/install
-	$(INSTALL_DIR) $(1)/usr/local/lib/lua/5.4/eco/core
-	$(INSTALL_DATA) $(PKG_BUILD_DIR)/ubus.lua $(1)/usr/local/lib/lua/5.4/eco
-	$(INSTALL_BIN) $(PKG_BUILD_DIR)/ubus.so $(1)/usr/local/lib/lua/5.4/eco/core
+	$(INSTALL_DIR) $(1)$(LUA_INSTALL_DIR)/eco/internal
+	$(INSTALL_DATA) $(PKG_BUILD_DIR)/ubus.lua $(1)$(LUA_INSTALL_DIR)/eco
+	$(INSTALL_BIN) $(PKG_BUILD_DIR)/ubus.so $(1)$(LUA_INSTALL_DIR)/eco/internal
 endef
 
 define Package/lua-eco-http/install
-	$(INSTALL_DIR) $(1)/usr/local/lib/lua/5.4/eco/http
-	$(INSTALL_DATA) $(PKG_BUILD_DIR)/http/*.lua $(1)/usr/local/lib/lua/5.4/eco/http
+	$(INSTALL_DIR) $(1)$(LUA_INSTALL_DIR)/eco/http
+	$(INSTALL_DATA) $(PKG_BUILD_DIR)/http/*.lua $(1)$(LUA_INSTALL_DIR)/eco/http
 endef
 
 define Package/lua-eco-mqtt/install
-	$(INSTALL_DIR) $(1)/usr/local/lib/lua/5.4/eco
-	$(INSTALL_DATA) $(PKG_BUILD_DIR)/mqtt.lua $(1)/usr/local/lib/lua/5.4/eco
+	$(INSTALL_DIR) $(1)$(LUA_INSTALL_DIR)/eco
+	$(INSTALL_DATA) $(PKG_BUILD_DIR)/mqtt.lua $(1)$(LUA_INSTALL_DIR)/eco
 endef
 
 define Package/lua-eco-websocket/install
-	$(INSTALL_DIR) $(1)/usr/local/lib/lua/5.4/eco
-	$(INSTALL_DATA) $(PKG_BUILD_DIR)/websocket.lua $(1)/usr/local/lib/lua/5.4/eco
+	$(INSTALL_DIR) $(1)$(LUA_INSTALL_DIR)/eco
+	$(INSTALL_DATA) $(PKG_BUILD_DIR)/websocket.lua $(1)$(LUA_INSTALL_DIR)/eco
 endef
 
 define Package/lua-eco-termios/install
-	$(INSTALL_DIR) $(1)/usr/local/lib/lua/5.4/eco
-	$(INSTALL_BIN) $(PKG_BUILD_DIR)/termios.so $(1)/usr/local/lib/lua/5.4/eco
+	$(INSTALL_DIR) $(1)$(LUA_INSTALL_DIR)/eco
+	$(INSTALL_BIN) $(PKG_BUILD_DIR)/termios.so $(1)$(LUA_INSTALL_DIR)/eco
 endef
 
 define Package/lua-eco-netlink/install
-	$(INSTALL_DIR) $(1)/usr/local/lib/lua/5.4/eco/core
-	$(INSTALL_DATA) $(PKG_BUILD_DIR)/{nl,genl}.lua $(1)/usr/local/lib/lua/5.4/eco
-	$(INSTALL_BIN) $(PKG_BUILD_DIR)/{nl,genl}.so $(1)/usr/local/lib/lua/5.4/eco/core
-	$(INSTALL_BIN) $(PKG_BUILD_DIR)/rtnl.so $(1)/usr/local/lib/lua/5.4/eco
+	$(INSTALL_DIR) $(1)$(LUA_INSTALL_DIR)/eco/internal
+	$(INSTALL_DATA) $(PKG_BUILD_DIR)/nl/{nl,genl}.lua $(1)$(LUA_INSTALL_DIR)/eco
+	$(INSTALL_BIN) $(PKG_BUILD_DIR)/nl/{nl,genl}.so $(1)$(LUA_INSTALL_DIR)/eco/internal
+	$(INSTALL_BIN) $(PKG_BUILD_DIR)/nl/rtnl.so $(1)$(LUA_INSTALL_DIR)/eco
 endef
 
 define Package/lua-eco-ip/install
-	$(INSTALL_DIR) $(1)/usr/local/lib/lua/5.4/eco
-	$(INSTALL_DATA) $(PKG_BUILD_DIR)/ip.lua $(1)/usr/local/lib/lua/5.4/eco
+	$(INSTALL_DIR) $(1)$(LUA_INSTALL_DIR)/eco
+	$(INSTALL_DATA) $(PKG_BUILD_DIR)/nl/ip.lua $(1)$(LUA_INSTALL_DIR)/eco
 endef
 
 define Package/lua-eco-nl80211/install
-	$(INSTALL_DIR) $(1)/usr/local/lib/lua/5.4/eco/core
-	$(INSTALL_DATA) $(PKG_BUILD_DIR)/nl80211.lua $(1)/usr/local/lib/lua/5.4/eco
-	$(INSTALL_BIN) $(PKG_BUILD_DIR)/nl80211.so $(1)/usr/local/lib/lua/5.4/eco/core
+	$(INSTALL_DIR) $(1)$(LUA_INSTALL_DIR)/eco/internal
+	$(INSTALL_DATA) $(PKG_BUILD_DIR)/nl/nl80211.lua $(1)$(LUA_INSTALL_DIR)/eco
+	$(INSTALL_BIN) $(PKG_BUILD_DIR)/nl/nl80211.so $(1)$(LUA_INSTALL_DIR)/eco/internal
 endef
 
 define Package/lua-eco-ssh/install
-	$(INSTALL_DIR) $(1)/usr/local/lib/lua/5.4/eco/core
-	$(INSTALL_DATA) $(PKG_BUILD_DIR)/ssh.lua $(1)/usr/local/lib/lua/5.4/eco
-	$(INSTALL_BIN) $(PKG_BUILD_DIR)/ssh.so $(1)/usr/local/lib/lua/5.4/eco/core
+	$(INSTALL_DIR) $(1)$(LUA_INSTALL_DIR)/eco/internal
+	$(INSTALL_DATA) $(PKG_BUILD_DIR)/ssh.lua $(1)$(LUA_INSTALL_DIR)/eco
+	$(INSTALL_BIN) $(PKG_BUILD_DIR)/ssh.so $(1)$(LUA_INSTALL_DIR)/eco/internal
 endef
 
 define Package/lua-eco-packet/install
-	$(INSTALL_DIR) $(1)/usr/local/lib/lua/5.4/eco
-	$(INSTALL_DATA) $(PKG_BUILD_DIR)/packet.lua $(1)/usr/local/lib/lua/5.4/eco
+	$(INSTALL_DIR) $(1)$(LUA_INSTALL_DIR)/eco
+	$(INSTALL_DATA) $(PKG_BUILD_DIR)/packet.lua $(1)$(LUA_INSTALL_DIR)/eco
 endef
 
 define Package/lua-eco-uci/install
-	$(INSTALL_DIR) $(1)/usr/local/lib/lua/5.4/eco
-	$(INSTALL_DATA) $(PKG_BUILD_DIR)/uci.so $(1)/usr/local/lib/lua/5.4/eco
+	$(INSTALL_DIR) $(1)$(LUA_INSTALL_DIR)/eco
+	$(INSTALL_DATA) $(PKG_BUILD_DIR)/uci.so $(1)$(LUA_INSTALL_DIR)/eco
 endef
 
 define Package/lua-eco-shared/install
-	$(INSTALL_DIR) $(1)/usr/local/lib/lua/5.4/eco
-	$(INSTALL_DATA) $(PKG_BUILD_DIR)/shared.lua $(1)/usr/local/lib/lua/5.4/eco
+	$(INSTALL_DIR) $(1)$(LUA_INSTALL_DIR)/eco
+	$(INSTALL_BIN) $(PKG_BUILD_DIR)/shared.so $(1)$(LUA_INSTALL_DIR)/eco
 endef
 
 define Package/lua-eco-net/install
-	$(INSTALL_DIR) $(1)/usr/local/lib/lua/5.4/eco
-	$(INSTALL_DATA) $(PKG_BUILD_DIR)/net.lua $(1)/usr/local/lib/lua/5.4/eco
+	$(INSTALL_DIR) $(1)$(LUA_INSTALL_DIR)/eco
+	$(INSTALL_DATA) $(PKG_BUILD_DIR)/net.lua $(1)$(LUA_INSTALL_DIR)/eco
 endef
 
 $(eval $(call BuildPackage,lua-eco))
+$(eval $(call BuildPackage,lua-eco-cli))
 $(eval $(call BuildPackage,lua-eco-log))
 $(eval $(call BuildPackage,lua-eco-base64))
 $(eval $(call BuildPackage,lua-eco-sha1))

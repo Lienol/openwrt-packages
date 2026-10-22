@@ -1,12 +1,12 @@
 include $(TOPDIR)/rules.mk
 
 PKG_NAME:=lua-ffi
-PKG_VERSION:=1.1.0
-PKG_RELEASE:=1
+PKG_VERSION:=1.3.0
+PKG_RELEASE:=2
 
 PKG_SOURCE:=$(PKG_NAME)-$(PKG_VERSION).tar.gz
 PKG_SOURCE_URL=https://github.com/zhaojh329/lua-ffi/releases/download/v$(PKG_VERSION)
-PKG_HASH:=85651aa772de5717b85fc6ac9bba61f0dc20155707fad8099245f97ecd301996
+PKG_HASH:=718eaa7688ee85af6f8a5a7ac9cdf523e81c5a95a99ae81d8ae262b6622f1983
 
 PKG_MAINTAINER:=Jianhui Zhao <zhaojh329@gmail.com>
 PKG_LICENSE:=MIT
@@ -54,30 +54,25 @@ Package/lua-ffi-lua5.4/description = $(Package/lua-ffi/default/description)
 
 ifeq ($(BUILD_VARIANT),lua51)
   CMAKE_OPTIONS += -DLUA_INCLUDE_DIR="$(STAGING_DIR)/usr/include"
+  LUA_INSTALL_DIR:=/usr/lib/lua
 endif
 
 ifeq ($(BUILD_VARIANT),lua53)
   CMAKE_OPTIONS += -DLUA_INCLUDE_DIR="$(STAGING_DIR)/usr/include/lua5.3"
+  LUA_INSTALL_DIR:=/usr/local/lib/lua/5.3
 endif
 
 ifeq ($(BUILD_VARIANT),lua54)
   CMAKE_OPTIONS += -DLUA_INCLUDE_DIR="$(STAGING_DIR)/usr/include/lua5.4"
+  LUA_INSTALL_DIR:=/usr/lib/lua/5.4
 endif
 
 define Package/lua-ffi/install
-	$(INSTALL_DIR) $(1)/usr/lib/lua
-	$(INSTALL_BIN) $(PKG_BUILD_DIR)/ffi.so $(1)/usr/lib/lua
+	$(INSTALL_DIR) $(1)$(LUA_INSTALL_DIR)
+	$(INSTALL_BIN) $(PKG_BUILD_DIR)/ffi.so $(1)$(LUA_INSTALL_DIR)
 endef
-
-define Package/lua-ffi-lua5.3/install
-	$(INSTALL_DIR) $(1)/usr/local/lib/lua/5.3
-	$(INSTALL_BIN) $(PKG_BUILD_DIR)/ffi.so $(1)/usr/local/lib/lua/5.3
-endef
-
-define Package/lua-ffi-lua5.4/install
-	$(INSTALL_DIR) $(1)/usr/local/lib/lua/5.4
-	$(INSTALL_BIN) $(PKG_BUILD_DIR)/ffi.so $(1)/usr/local/lib/lua/5.4
-endef
+Package/lua-ffi-lua5.3/install = $(Package/lua-ffi/install)
+Package/lua-ffi-lua5.4/install = $(Package/lua-ffi/install)
 
 $(eval $(call BuildPackage,lua-ffi))
 $(eval $(call BuildPackage,lua-ffi-lua5.3))
