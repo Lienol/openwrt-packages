@@ -1,0 +1,32 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Sven Eckelmann <sven@narfation.org>
+Date: Fri, 12 Jun 2026 13:44:07 +0200
+Subject: batman-adv: tt: don't merge change entries with different VIDs
+
+batadv_tt_local_event() merges/cancels events for the same client which
+would conflict or be duplicates. The matching of the queued events only
+compares the MAC address - the VLAN ID stored in each event is ignored.
+
+If a MAC would now appear on multiple VID, the two ADD change events (for
+VID 1 and VID 2) would be merged to a single vid event. The remote can
+therefore not calculate the correct TT table and desync. A full translation
+table exchange is required to recover from this state.
+
+A check of VID is therefore necessary to avoid such wrong merges/cancels.
+
+Fixes: 580d7919f19e ("batman-adv: add the VLAN ID attribute to the TT entry")
+Signed-off-by: Sven Eckelmann <sven@narfation.org>
+Origin: upstream, https://git.open-mesh.org/batman-adv.git/commit/?id=2c7692b923cfcb790e74fe0e61a37cc395ceb339
+
+--- a/net/batman-adv/translation-table.c
++++ b/net/batman-adv/translation-table.c
+@@ -486,6 +486,9 @@ static void batadv_tt_local_event(struct
+ 		if (!batadv_compare_eth(entry->change.addr, common->addr))
+ 			continue;
+ 
++		if (entry->change.vid != tt_change_node->change.vid)
++			continue;
++
+ 		del_op_entry = entry->change.flags & BATADV_TT_CLIENT_DEL;
+ 		if (del_op_requested != del_op_entry) {
+ 			/* DEL+ADD in the same orig interval have no effect and

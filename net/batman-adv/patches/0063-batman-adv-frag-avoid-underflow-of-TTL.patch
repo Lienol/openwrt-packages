@@ -1,0 +1,32 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Sven Eckelmann <sven@narfation.org>
+Date: Thu, 11 Jun 2026 22:14:54 +0200
+Subject: batman-adv: frag: avoid underflow of TTL
+
+Packets with a TTL are using it to limit the amount of time this packet can
+be forwarded. But for batadv_frag_packet, the TTL was always only reduced
+but it was never evaluated. It could even underflow without any effect.
+
+Check the TTL in batadv_frag_skb_fwd() before attempting to prepare it for
+forwarding. This keeps it in sync with the not fragmented unicast packet.
+
+Fixes: 9b3eab61754d ("batman-adv: Receive fragmented packets and merge")
+Signed-off-by: Sven Eckelmann <sven@narfation.org>
+Origin: upstream, https://git.open-mesh.org/batman-adv.git/commit/?id=228637c8c92b5a7738cc881f1f40966ac2066cab
+
+--- a/net/batman-adv/fragmentation.c
++++ b/net/batman-adv/fragmentation.c
+@@ -415,6 +415,13 @@ bool batadv_frag_skb_fwd(struct sk_buff
+ 	 */
+ 	total_size = ntohs(packet->total_size);
+ 	if (total_size > neigh_node->if_incoming->net_dev->mtu) {
++		if (packet->ttl < 2) {
++			kfree_skb(skb);
++			*rx_result = NET_RX_DROP;
++			ret = true;
++			goto out;
++		}
++
+ 		if (skb_cow(skb, ETH_HLEN) < 0) {
+ 			kfree_skb(skb);
+ 			*rx_result = NET_RX_DROP;

@@ -1,0 +1,35 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Sven Eckelmann <sven@narfation.org>
+Date: Mon, 1 Jun 2026 11:00:23 +0200
+Subject: batman-adv: tp_meter: fix fast recovery precondition
+
+The fast recovery precondition checks if the recover (initialized to
+BATADV_TP_FIRST_SEQ) is bigger than the received ack. But since recover is
+only updated when this check is successful, it will never enter the fast
+recovery mode.
+
+According to RFC6582 Section 3.2 step 2, the check should actually be
+different:
+
+> When the third duplicate ACK is received, the TCP sender first
+> checks the value of recover to see if the Cumulative
+> Acknowledgment field covers more than recover
+
+The precondition must therefore check if recover is smaller than the
+received ack - basically swapping the operands of the current check.
+
+Fixes: 98d7a766b645 ("batman-adv: throughput meter implementation")
+Signed-off-by: Sven Eckelmann <sven@narfation.org>
+Origin: upstream, https://git.open-mesh.org/batman-adv.git/commit/?id=e710bc19ca21be957cac15981e5f52b7c9983679
+
+--- a/net/batman-adv/tp_meter.c
++++ b/net/batman-adv/tp_meter.c
+@@ -733,7 +733,7 @@ static void batadv_tp_recv_ack(struct ba
+ 		if (atomic_read(&tp_vars->dup_acks) != 3)
+ 			goto out;
+ 
+-		if (recv_ack >= tp_vars->recover)
++		if (tp_vars->recover >= recv_ack)
+ 			goto out;
+ 
+ 		/* if this is the third duplicate ACK do Fast Retransmit */

@@ -1,0 +1,27 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Sven Eckelmann <sven@narfation.org>
+Date: Thu, 28 May 2026 21:14:39 +0200
+Subject: batman-adv: tp_meter: initialize dec_cwnd explicitly
+
+When batadv_tp_update_cwnd() is called, dec_cwnd is increased. But dec_cwnd
+is only initialixed (to 0) when a duplicate Ack was received or when cwnd
+is below the ss_threshold.
+
+Just initialize the cwnd during the initialization to avoid any potential
+access of uninitialized data.
+
+Fixes: 98d7a766b645 ("batman-adv: throughput meter implementation")
+Signed-off-by: Sven Eckelmann <sven@narfation.org>
+Origin: upstream, https://git.open-mesh.org/batman-adv.git/commit/?id=bd8fbe31a7ef073676b42133861cc2c7abff6d32
+
+--- a/net/batman-adv/tp_meter.c
++++ b/net/batman-adv/tp_meter.c
+@@ -1055,6 +1055,8 @@ void batadv_tp_start(struct batadv_priv
+ 	 * mesh_interface, hence its MTU
+ 	 */
+ 	tp_vars->cwnd = BATADV_TP_PLEN * 3;
++	tp_vars->dec_cwnd = 0;
++
+ 	/* at the beginning initialise the SS threshold to the biggest possible
+ 	 * window size, hence the AWND size
+ 	 */

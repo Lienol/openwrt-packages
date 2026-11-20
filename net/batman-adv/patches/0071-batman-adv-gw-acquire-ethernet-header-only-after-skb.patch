@@ -1,0 +1,30 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Sven Eckelmann <sven@narfation.org>
+Date: Sun, 28 Jun 2026 08:45:41 +0200
+Subject: batman-adv: gw: acquire ethernet header only after skb realloc
+
+The pskb_may_pull() called by batadv_get_vid() could reallocate the buffer
+behind the skb. Variables which were pointing to the old buffer need to be
+reassigned to avoid an use-after-free.
+
+Fixes: 2d5b555644b2 ("batman-adv: send every DHCP packet as bat-unicast")
+Signed-off-by: Sven Eckelmann <sven@narfation.org>
+Origin: upstream, https://git.open-mesh.org/batman-adv.git/commit/?id=79c10f661c30b27b7cb4129ab02e16997402d6c9
+
+--- a/net/batman-adv/gateway_client.c
++++ b/net/batman-adv/gateway_client.c
+@@ -683,12 +683,13 @@ bool batadv_gw_out_of_range(struct batad
+ 	struct batadv_gw_node *gw_node = NULL;
+ 	struct batadv_gw_node *curr_gw = NULL;
+ 	struct batadv_neigh_ifinfo *curr_ifinfo, *old_ifinfo;
+-	struct ethhdr *ethhdr = (struct ethhdr *)skb->data;
++	struct ethhdr *ethhdr;
+ 	bool out_of_range = false;
+ 	u8 curr_tq_avg;
+ 	unsigned short vid;
+ 
+ 	vid = batadv_get_vid(skb, 0);
++	ethhdr = (struct ethhdr *)skb->data;
+ 
+ 	if (is_multicast_ether_addr(ethhdr->h_dest))
+ 		goto out;

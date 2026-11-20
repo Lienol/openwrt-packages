@@ -1,0 +1,23 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Sven Eckelmann <sven@narfation.org>
+Date: Sun, 28 Jun 2026 08:45:41 +0200
+Subject: batman-adv: bla: reacquire gw address after skb realloc
+
+The pskb_may_pull() called by batadv_bla_is_backbone_gw() could reallocate
+the buffer behind the skb. Variables which were pointing to the old buffer
+need to be reassigned to avoid an use-after-free.
+
+Fixes: bfe2a1971f43 ("batman-adv: drop unicast packets from other backbone gw")
+Signed-off-by: Sven Eckelmann <sven@narfation.org>
+Origin: upstream, https://git.open-mesh.org/batman-adv.git/commit/?id=3f92d8abc4fb7af52faf4f64d9e4438bca59dcb9
+
+--- a/net/batman-adv/routing.c
++++ b/net/batman-adv/routing.c
+@@ -1029,6 +1029,7 @@ int batadv_recv_unicast_packet(struct sk
+ 							  hdr_size);
+ 			batadv_orig_node_put(orig_node_gw);
+ 			if (is_gw) {
++				orig_addr_gw = eth_hdr(skb)->h_source;
+ 				batadv_dbg(BATADV_DBG_BLA, bat_priv,
+ 					   "%s(): Dropped unicast pkt received from another backbone gw %pM.\n",
+ 					   __func__, orig_addr_gw);

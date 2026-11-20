@@ -1,0 +1,28 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Sven Eckelmann <sven@narfation.org>
+Date: Sun, 28 Jun 2026 06:44:13 +0200
+Subject: batman-adv: retrieve ethhdr after potential skb realloc on RX
+
+pskb_may_pull() in batadv_interface_rx() could reallocate the buffer behind
+the skb. Variables which were pointing to the old buffer need to be
+reassigned to avoid an use-after-free.
+
+This was done correctly for the VLAN header but missed for the ethernet
+header which is later used for the TT and AP isolation handling.
+
+Reported-by: Sashiko <sashiko-bot@kernel.org>
+Fixes: 48628bb9419f ("batman-adv: softif bridge loop avoidance")
+Fixes: 7d2f8a773bae ("batman-adv: Check skb size before using encapsulated ETH+VLAN header")
+Signed-off-by: Sven Eckelmann <sven@narfation.org>
+Origin: upstream, https://git.open-mesh.org/batman-adv.git/commit/?id=b28ce4b5afac5ddcfbb7daab668862d557ef1a15
+
+--- a/net/batman-adv/mesh-interface.c
++++ b/net/batman-adv/mesh-interface.c
+@@ -432,6 +432,7 @@ void batadv_interface_rx(struct net_devi
+ 		if (!pskb_may_pull(skb, VLAN_ETH_HLEN))
+ 			goto dropped;
+ 
++		ethhdr = eth_hdr(skb);
+ 		vhdr = skb_vlan_eth_hdr(skb);
+ 
+ 		/* drop batman-in-batman packets to prevent loops */

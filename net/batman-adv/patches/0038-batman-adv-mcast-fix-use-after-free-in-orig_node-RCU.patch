@@ -1,0 +1,40 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Sven Eckelmann <sven@narfation.org>
+Date: Thu, 14 May 2026 19:22:02 +0200
+Subject: batman-adv: mcast: fix use-after-free in orig_node RCU release
+
+batadv_mcast_purge_orig() removes entries from RCU-protected hlists but
+does not wait for an RCU grace period before returning. Concurrent RCU
+readers may still accesses references to those entries at the point of
+removal. RCU-protected readers trying to operate on entries like
+orig->mcast_want_all_ipv6_node will then access already freed memory.
+
+Fix this by moving batadv_mcast_purge_orig() to batadv_orig_node_release(),
+just before the call_rcu() invocation. This ensures RCU readers that were
+active at purge time have drained before the orig_node memory is reclaimed.
+
+Fixes: 1c090349e2f6 ("batman-adv: Add IPv4 link-local/IPv6-ll-all-nodes multicast support")
+Acked-by: Linus Lüssing <linus.luessing@c0d3.blue>
+Signed-off-by: Sven Eckelmann <sven@narfation.org>
+Origin: upstream, https://git.open-mesh.org/batman-adv.git/commit/?id=4ff638adb7d4fd7d4eb9744d4bd8c5950d05e4e0
+
+--- a/net/batman-adv/originator.c
++++ b/net/batman-adv/originator.c
+@@ -835,8 +835,6 @@ static void batadv_orig_node_free_rcu(st
+ 
+ 	orig_node = container_of(rcu, struct batadv_orig_node, rcu);
+ 
+-	batadv_mcast_purge_orig(orig_node);
+-
+ 	batadv_frag_purge_orig(orig_node, NULL);
+ 
+ 	kfree(orig_node->tt_buff);
+@@ -887,6 +885,8 @@ void batadv_orig_node_release(struct kre
+ 	}
+ 	spin_unlock_bh(&orig_node->vlan_list_lock);
+ 
++	batadv_mcast_purge_orig(orig_node);
++
+ 	call_rcu(&orig_node->rcu, batadv_orig_node_free_rcu);
+ }
+ 

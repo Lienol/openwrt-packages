@@ -1,0 +1,33 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Sven Eckelmann <sven@narfation.org>
+Date: Sat, 2 May 2026 19:53:21 +0200
+Subject: batman-adv: tt: fix negative last_changeset_len
+
+batadv_piv_tt::last_changeset_len len was declared as s16, but the field is
+never intended to hold a negative value. When a value greater than 32767 is
+assigned, it wraps to a negative signed integer.
+
+In batadv_send_my_tt_response(), last_changeset_len is temporarily widened
+to s32. The incorrectly negative s16 value propagates into the s32, causing
+batadv_tt_prepare_tvlv_local_data() to allocate a full sized buffer but
+populates only a small portion of it with the collected changeset. All
+remaining bits are kept uninitialized.
+
+Using an u16 avoids this type confusion and ensures that no (negative) sign
+extension is performed in batadv_send_my_tt_response().
+
+Fixes: cea194d90b11 ("batman-adv: improved client announcement mechanism")
+Signed-off-by: Sven Eckelmann <sven@narfation.org>
+Origin: upstream, https://git.open-mesh.org/batman-adv.git/commit/?id=e818e87e81417a2d73fdbe6cfc70ffb9527662d1
+
+--- a/net/batman-adv/types.h
++++ b/net/batman-adv/types.h
+@@ -993,7 +993,7 @@ struct batadv_priv_tt {
+ 	 * @last_changeset_len: length of last tt changeset this host has
+ 	 *  generated
+ 	 */
+-	s16 last_changeset_len;
++	u16 last_changeset_len;
+ 
+ 	/**
+ 	 * @last_changeset_lock: lock protecting last_changeset &

@@ -1,0 +1,37 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Sven Eckelmann <sven@narfation.org>
+Date: Wed, 10 Jun 2026 13:33:19 +0200
+Subject: batman-adv: ensure bcast is writable before modifying TTL
+
+Before batman-adv is allowed to write to an skb, it either has to have its
+own copy of the skb or used skb_cow() to ensure that the data part is not
+shared.
+
+The old implementation used a shared queue and created copies before
+attempting to write to it. But with the new implementation, the broadcast
+packet is already modified when it gets received. Potentially writing to
+shared buffers in this process.
+
+Adding a skb_cow() right before this operation avoids this and can at the
+same time prepare it for the modifications required to rebroadcast the
+packet.
+
+Fixes: 5e399a8a6b09 ("batman-adv: bcast: queue per interface, if needed")
+Signed-off-by: Sven Eckelmann <sven@narfation.org>
+Origin: upstream, https://git.open-mesh.org/batman-adv.git/commit/?id=2a1c73440bd6a838dfe3177da1c531186571f6e8
+
+--- a/net/batman-adv/routing.c
++++ b/net/batman-adv/routing.c
+@@ -1191,6 +1191,12 @@ int batadv_recv_bcast_packet(struct sk_b
+ 	if (batadv_is_my_mac(bat_priv, bcast_packet->orig))
+ 		goto free_skb;
+ 
++	/* create a copy of the skb, if needed, to modify it. */
++	if (skb_cow(skb, ETH_HLEN) < 0)
++		goto free_skb;
++
++	bcast_packet = (struct batadv_bcast_packet *)skb->data;
++
+ 	if (bcast_packet->ttl-- < 2)
+ 		goto free_skb;
+ 

@@ -1,0 +1,19 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Sven Eckelmann <sven@narfation.org>
+Date: Sat, 2 May 2026 22:00:20 +0200
+Subject: batman-adv: tp_meter: add missing completion header
+
+Fixes: 13f49ae89725 ("batman-adv: stop tp_meter sessions during mesh teardown")
+Signed-off-by: Sven Eckelmann <sven@narfation.org>
+Origin: upstream, https://git.open-mesh.org/batman-adv.git/commit/?id=f77931495fadb1b5a1d8f0c863153f9db7e01207
+
+--- a/net/batman-adv/tp_meter.c
++++ b/net/batman-adv/tp_meter.c
+@@ -12,6 +12,7 @@
+ #include <linux/byteorder/generic.h>
+ #include <linux/cache.h>
+ #include <linux/compiler.h>
++#include <linux/completion.h>
+ #include <linux/container_of.h>
+ #include <linux/err.h>
+ #include <linux/etherdevice.h>

@@ -1,0 +1,24 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Sven Eckelmann <sven@narfation.org>
+Date: Wed, 6 May 2026 22:20:52 +0200
+Subject: batman-adv: bla: put backbone reference on failed claim hash insert
+
+When batadv_bla_add_claim() fails to insert a new claim into the hash, it
+leaked a reference to the backbone_gw for which the claim was intended.
+Call batadv_backbone_gw_put() on the error path to release the reference
+and avoid leaking the backbone_gw object.
+
+Fixes: e401297e3a39 ("batman-adv: Fix non-atomic bla_claim::backbone_gw access")
+Signed-off-by: Sven Eckelmann <sven@narfation.org>
+Origin: upstream, https://git.open-mesh.org/batman-adv.git/commit/?id=05abe1217c5104b3514ef1945dacf511b012b921
+
+--- a/net/batman-adv/bridge_loop_avoidance.c
++++ b/net/batman-adv/bridge_loop_avoidance.c
+@@ -724,6 +724,7 @@ static void batadv_bla_add_claim(struct
+ 
+ 		if (unlikely(hash_added != 0)) {
+ 			/* only local changes happened. */
++			batadv_backbone_gw_put(backbone_gw);
+ 			kfree(claim);
+ 			return;
+ 		}

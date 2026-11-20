@@ -1,0 +1,26 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Sven Eckelmann <sven@narfation.org>
+Date: Mon, 1 Jun 2026 11:47:29 +0200
+Subject: batman-adv: tp_meter: handle seqno wrap-around for fast recovery detection
+
+The recover variable and the last_sent sequence number are initialized on
+purpose as a really high value which will wrap-around after the first 2000
+bytes. The fast recovery precondition must therefore not use simple integer
+comparisons but use helpers which are aware of the sequence number
+wrap-arounds.
+
+Fixes: 98d7a766b645 ("batman-adv: throughput meter implementation")
+Signed-off-by: Sven Eckelmann <sven@narfation.org>
+Origin: upstream, https://git.open-mesh.org/batman-adv.git/commit/?id=f6463f77ba6b8453b5efe994e7c6b532afec16bf
+
+--- a/net/batman-adv/tp_meter.c
++++ b/net/batman-adv/tp_meter.c
+@@ -733,7 +733,7 @@ static void batadv_tp_recv_ack(struct ba
+ 		if (atomic_read(&tp_vars->dup_acks) != 3)
+ 			goto out;
+ 
+-		if (tp_vars->recover >= recv_ack)
++		if (!batadv_seq_before(tp_vars->recover, recv_ack))
+ 			goto out;
+ 
+ 		/* if this is the third duplicate ACK do Fast Retransmit */

@@ -1,0 +1,44 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Sven Eckelmann <sven@narfation.org>
+Date: Sat, 13 Jun 2026 23:45:06 +0200
+Subject: batman-adv: dat: prevent false sharing between VLANs
+
+The local hash of DAT entries is supposed to be VLAN (VID) aware. But
+the adding to the hash and the search in the hash were not checking the VID
+information of the hash entries. The entries would therefore only be
+correctly separated when batadv_hash_dat() didn't select the same buckets
+for different VIDs.
+
+Fixes: 3e26722bc9f2 ("batman-adv: make the Distributed ARP Table vlan aware")
+Signed-off-by: Sven Eckelmann <sven@narfation.org>
+Origin: upstream, https://git.open-mesh.org/batman-adv.git/commit/?id=02de6a43548cc272b3f7f947351c66c50d2a8170
+
+--- a/net/batman-adv/distributed-arp-table.c
++++ b/net/batman-adv/distributed-arp-table.c
+@@ -214,10 +214,13 @@ static void batadv_dat_purge(struct work
+  */
+ static bool batadv_compare_dat(const struct hlist_node *node, const void *data2)
+ {
+-	const void *data1 = container_of(node, struct batadv_dat_entry,
+-					 hash_entry);
++	const struct batadv_dat_entry *entry1;
++	const struct batadv_dat_entry *entry2;
+ 
+-	return memcmp(data1, data2, sizeof(__be32)) == 0;
++	entry1 = container_of(node, struct batadv_dat_entry, hash_entry);
++	entry2 = data2;
++
++	return entry1->ip == entry2->ip && entry1->vid == entry2->vid;
+ }
+ 
+ /**
+@@ -344,6 +347,9 @@ batadv_dat_entry_hash_find(struct batadv
+ 		if (dat_entry->ip != ip)
+ 			continue;
+ 
++		if (dat_entry->vid != vid)
++			continue;
++
+ 		if (!kref_get_unless_zero(&dat_entry->refcount))
+ 			continue;
+ 

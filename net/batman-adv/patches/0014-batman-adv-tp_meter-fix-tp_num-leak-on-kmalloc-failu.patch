@@ -1,0 +1,42 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Sven Eckelmann <sven@narfation.org>
+Date: Wed, 6 May 2026 22:20:49 +0200
+Subject: batman-adv: tp_meter: fix tp_num leak on kmalloc failure
+
+When batadv_tp_start() or batadv_tp_init_recv() fail to allocate a new
+tp_vars object, the previously incremented bat_priv->tp_num counter is
+never decremented. This causes tp_num to drift upward on each allocation
+failure. Since only BATADV_TP_MAX_NUM sessions can be started and the count
+is never reduced for these failed allocations, it causes to an exhaustion
+of throughput meter sessions. In worst case, no new throughput meter
+session can be started until the mesh interface is removed.
+
+The error handling must decrement tp_num releasing the lock and aborting
+the creation of an throughput meter session
+
+Fixes: 98d7a766b645 ("batman-adv: throughput meter implementation")
+Signed-off-by: Sven Eckelmann <sven@narfation.org>
+Origin: upstream, https://git.open-mesh.org/batman-adv.git/commit/?id=25e3d52ef55f63c973ef1d018b6ac03b5f33a9bd
+
+--- a/net/batman-adv/tp_meter.c
++++ b/net/batman-adv/tp_meter.c
+@@ -994,6 +994,7 @@ void batadv_tp_start(struct batadv_priv
+ 
+ 	tp_vars = kmalloc(sizeof(*tp_vars), GFP_ATOMIC);
+ 	if (!tp_vars) {
++		atomic_dec(&bat_priv->tp_num);
+ 		spin_unlock_bh(&bat_priv->tp_list_lock);
+ 		batadv_dbg(BATADV_DBG_TP_METER, bat_priv,
+ 			   "Meter: %s cannot allocate list elements\n",
+@@ -1366,8 +1367,10 @@ batadv_tp_init_recv(struct batadv_priv *
+ 	}
+ 
+ 	tp_vars = kmalloc(sizeof(*tp_vars), GFP_ATOMIC);
+-	if (!tp_vars)
++	if (!tp_vars) {
++		atomic_dec(&bat_priv->tp_num);
+ 		goto out_unlock;
++	}
+ 
+ 	ether_addr_copy(tp_vars->other_end, icmp->orig);
+ 	tp_vars->role = BATADV_TP_RECEIVER;

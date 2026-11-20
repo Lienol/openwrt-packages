@@ -1,0 +1,65 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Sven Eckelmann <sven@narfation.org>
+Date: Wed, 6 May 2026 22:20:48 +0200
+Subject: batman-adv: iv: avoid bonding logic for outgoing OGM
+
+The batadv_orig_to_router() function will invoke batadv_find_router() to
+get the neighbor node (router) for the specified interface. But
+batadv_find_router() also is responsible for the bonding code when the
+default (NULL) interface is specified. This is rather unexpected for the
+OGM code.
+
+Instead provide a simpler function which never tries to interact with the
+bonding candidates and only returns the router on a specific interface.
+
+Fixes: fa15d5b68da1 ("batman-adv: stop caching unowned originator pointers in BAT IV")
+Signed-off-by: Sven Eckelmann <sven@narfation.org>
+Origin: upstream, https://git.open-mesh.org/batman-adv.git/commit/?id=b33ac3beccd6864c32d9de7efaf2d1f96a546283
+
+--- a/net/batman-adv/bat_iv_ogm.c
++++ b/net/batman-adv/bat_iv_ogm.c
+@@ -1311,6 +1311,32 @@ out:
+ }
+ 
+ /**
++ * batadv_orig_to_direct_router() - get direct next hop neighbor to an orig address
++ * @bat_priv: the bat priv with all the mesh interface information
++ * @orig_addr: the originator MAC address to search the best next hop router for
++ * @if_outgoing: the interface where the OGM should be sent to
++ *
++ * Return: A neighbor node which is the best router towards the given originator
++ * address. Bonding candidates are ignored.
++ */
++static struct batadv_neigh_node *
++batadv_orig_to_direct_router(struct batadv_priv *bat_priv, u8 *orig_addr,
++			     struct batadv_hard_iface *if_outgoing)
++{
++	struct batadv_neigh_node *neigh_node;
++	struct batadv_orig_node *orig_node;
++
++	orig_node = batadv_orig_hash_find(bat_priv, orig_addr);
++	if (!orig_node)
++		return NULL;
++
++	neigh_node = batadv_orig_router_get(orig_node, if_outgoing);
++	batadv_orig_node_put(orig_node);
++
++	return neigh_node;
++}
++
++/**
+  * batadv_iv_ogm_process_per_outif() - process a batman iv OGM for an outgoing
+  *  interface
+  * @skb: the skb containing the OGM
+@@ -1380,8 +1406,9 @@ batadv_iv_ogm_process_per_outif(const st
+ 
+ 	router = batadv_orig_router_get(orig_node, if_outgoing);
+ 	if (router) {
+-		router_router = batadv_orig_to_router(bat_priv, router->addr,
+-						      if_outgoing);
++		router_router = batadv_orig_to_direct_router(bat_priv,
++							     router->addr,
++							     if_outgoing);
+ 		router_ifinfo = batadv_neigh_ifinfo_get(router, if_outgoing);
+ 	}
+ 

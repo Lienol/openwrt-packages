@@ -1,0 +1,38 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Sven Eckelmann <sven@narfation.org>
+Date: Fri, 29 May 2026 23:36:43 +0200
+Subject: batman-adv: prevent ELP transmission interval underflow
+
+batadv_v_elp_start_timer() enqeues a delayed work. The time when it starts
+is randomly chosen between (elp_interval - BATADV_JITTER) and
+(elp_interval + BATADV_JITTER). The configured elp_interval must therefore
+be larger or equal to BATADV_JITTER to avoid that it causes an underflow of
+the unsigned integer. If this would happen, then a "fast" ELP interval
+would turn into a "day long" delay.
+
+At the same time, it must not be larger than the maximum value the variable
+can store.
+
+Fixes: 914db9648ed5 ("batman-adv: Add elp_interval hardif genl configuration")
+Signed-off-by: Sven Eckelmann <sven@narfation.org>
+Origin: upstream, https://git.open-mesh.org/batman-adv.git/commit/?id=120f830ef0d0befbadf16623b5c1ec62a73e8b43
+
+--- a/net/batman-adv/netlink.c
++++ b/net/batman-adv/netlink.c
+@@ -917,9 +917,15 @@ static int batadv_netlink_set_hardif(str
+ #ifdef CONFIG_BATMAN_ADV_BATMAN_V
+ 
+ 	if (info->attrs[BATADV_ATTR_ELP_INTERVAL]) {
++		u32 elp_interval;
++
+ 		attr = info->attrs[BATADV_ATTR_ELP_INTERVAL];
++		elp_interval = nla_get_u32(attr);
++
++		elp_interval = min_t(u32, elp_interval, INT_MAX);
++		elp_interval = max_t(u32, elp_interval, BATADV_JITTER);
+ 
+-		atomic_set(&hard_iface->bat_v.elp_interval, nla_get_u32(attr));
++		atomic_set(&hard_iface->bat_v.elp_interval, elp_interval);
+ 	}
+ 
+ 	if (info->attrs[BATADV_ATTR_THROUGHPUT_OVERRIDE]) {
